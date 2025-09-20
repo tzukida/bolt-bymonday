@@ -8,7 +8,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useData } from '@/contexts/DataContext';
-import { Bell, BellOff, Package, ShoppingCart, User, Settings, CheckCircle } from 'lucide-react-native';
+import { Bell, BellOff, Package, ShoppingCart, User, Settings, CircleCheck as CheckCircle } from 'lucide-react-native';
 
 export default function NotificationsScreen() {
   const { notifications, markNotificationAsRead, markAllNotificationsAsRead, unreadCount } = useData();

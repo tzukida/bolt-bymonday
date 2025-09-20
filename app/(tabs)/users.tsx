@@ -10,7 +10,7 @@ import {
   TextInput,
 } from 'react-native';
 import { useData } from '@/contexts/DataContext';
-import { Plus, Edit, Trash2, User, Shield, Mail, Calendar } from 'lucide-react-native';
+import { Plus, CreditCard as Edit, Trash2, User, Shield, Mail, Calendar } from 'lucide-react-native';
 import type { User as UserType } from '@/contexts/DataContext';
 
 export default function UsersScreen() {
