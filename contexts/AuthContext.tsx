@@ -15,12 +15,6 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Sample users - in a real app, this would be in a secure backend
-const SAMPLE_USERS = [
-  { username: 'admin', password: 'admin123', role: 'admin' as const },
-  { username: 'staff', password: 'staff123', role: 'staff' as const },
-];
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -43,21 +37,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const login = async (username: string, password: string): Promise<boolean> => {
-    const foundUser = SAMPLE_USERS.find(
-      u => u.username === username && u.password === password
-    );
+    try {
+      // Get users from storage
+      const usersData = await AsyncStorage.getItem('users');
+      const users = usersData ? JSON.parse(usersData) : [];
+      
+      const foundUser = users.find(
+        (u: any) => u.username === username && u.password === password
+      );
 
-    if (foundUser) {
-      const userData = { username: foundUser.username, role: foundUser.role };
-      setUser(userData);
-      await AsyncStorage.setItem('user', JSON.stringify(userData));
-      
-      // Log the login activity
-      await logActivity(`User ${username} logged in`, foundUser.role);
-      
-      return true;
+      if (foundUser) {
+        const userData = { username: foundUser.username, role: foundUser.role };
+        setUser(userData);
+        await AsyncStorage.setItem('user', JSON.stringify(userData));
+        
+        // Log the login activity
+        await logActivity(`User ${username} logged in`, foundUser.role);
+        
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error during login:', error);
+      return false;
     }
-    return false;
   };
 
   const logout = async () => {
@@ -76,7 +79,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const newLog = {
         id: Date.now().toString(),
         action,
-        role,
+        userId: user?.username || 'unknown',
+        userRole: role,
         timestamp: new Date().toISOString(),
       };
       

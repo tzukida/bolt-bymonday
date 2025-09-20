@@ -11,11 +11,11 @@ import {
   TextInput,
 } from 'react-native';
 import { useData } from '@/contexts/DataContext';
-import { Plus, CreditCard as Edit, Trash2, Package, TriangleAlert as AlertTriangle, Mail } from 'lucide-react-native';
+import { Plus, CreditCard as Edit, Trash2, Package, TriangleAlert as AlertTriangle, Mail, Send } from 'lucide-react-native';
 import type { Product } from '@/contexts/DataContext';
 
 export default function InventoryScreen() {
-  const { products, addProduct, updateProduct, deleteProduct } = useData();
+  const { products, addProduct, updateProduct, deleteProduct, emailLowStockSuppliers, getLowStockProducts } = useData();
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -112,11 +112,30 @@ export default function InventoryScreen() {
     );
   };
 
-  const handleEmailSupplier = (product: Product) => {
+  const handleEmailSuppliers = async () => {
+    const lowStockProducts = getLowStockProducts();
+    if (lowStockProducts.length === 0) {
+      Alert.alert('No Action Needed', 'All products are well stocked!');
+      return;
+    }
+
     Alert.alert(
-      'Email Supplier',
-      `Email has been sent to supplier requesting restock of ${product.name}`,
-      [{ text: 'OK' }]
+      'Email Suppliers',
+      `Send restock request for ${lowStockProducts.length} low stock products?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Send Email',
+          onPress: async () => {
+            await emailLowStockSuppliers();
+            Alert.alert(
+              'Email Sent',
+              `Restock requests sent to suppliers for ${lowStockProducts.length} products`,
+              [{ text: 'OK' }]
+            );
+          },
+        },
+      ]
     );
   };
 
@@ -218,12 +237,20 @@ export default function InventoryScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Inventory Management</Text>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => setShowAddModal(true)}
-        >
-          <Plus size={20} color="white" />
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            style={styles.emailButton}
+            onPress={handleEmailSuppliers}
+          >
+            <Send size={16} color="white" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => setShowAddModal(true)}
+          >
+            <Plus size={20} color="white" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView style={styles.content}>
@@ -266,17 +293,8 @@ export default function InventoryScreen() {
               </View>
 
               <View style={styles.productActions}>
-                {product.stock <= 10 && (
-                  <TouchableOpacity
-                    style={styles.emailButton}
-                    onPress={() => handleEmailSupplier(product)}
-                  >
-                    <Mail size={16} color="#8B4513" />
-                  </TouchableOpacity>
-                )}
-                
                 <TouchableOpacity
-                  style={styles.editButton}
+                  style={styles.editProductButton}
                   onPress={() => handleEditProduct(product)}
                 >
                   <Edit size={16} color="white" />
@@ -317,6 +335,18 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 20,
     fontWeight: 'bold',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  emailButton: {
+    backgroundColor: '#228B22',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   addButton: {
     backgroundColor: '#A0522D',
@@ -416,17 +446,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
   },
-  emailButton: {
-    backgroundColor: '#F5F5DC',
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#8B4513',
-  },
-  editButton: {
+  editProductButton: {
     backgroundColor: '#4169E1',
     width: 32,
     height: 32,

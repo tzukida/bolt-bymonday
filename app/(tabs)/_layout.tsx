@@ -1,11 +1,40 @@
 import { Tabs } from 'expo-router';
-import { Coffee, Chrome as Home, ChartBar as BarChart3, Package, Users, ShoppingCart } from 'lucide-react-native';
+import { Coffee, Chrome as Home, ChartBar as BarChart3, Package, Users, ShoppingCart, Bell } from 'lucide-react-native';
 import { useAuth } from '@/contexts/AuthContext';
+import { useData } from '@/contexts/DataContext';
+import { View, Text } from 'react-native';
 
 export default function TabLayout() {
   const { user } = useAuth();
+  const { unreadCount } = useData();
   const isAdmin = user?.role === 'admin';
 
+  const NotificationIcon = ({ size, color }: { size: number; color: string }) => (
+    <View style={{ position: 'relative' }}>
+      <Bell size={size} color={color} />
+      {unreadCount > 0 && (
+        <View style={{
+          position: 'absolute',
+          top: -4,
+          right: -4,
+          backgroundColor: '#FF6347',
+          borderRadius: 8,
+          minWidth: 16,
+          height: 16,
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}>
+          <Text style={{
+            color: 'white',
+            fontSize: 10,
+            fontWeight: 'bold',
+          }}>
+            {unreadCount > 9 ? '9+' : unreadCount}
+          </Text>
+        </View>
+      )}
+    </View>
+  );
   return (
     <Tabs
       screenOptions={{
@@ -44,6 +73,15 @@ export default function TabLayout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="notifications"
+        options={{
+          title: 'Notifications',
+          tabBarIcon: ({ size, color }) => (
+            <NotificationIcon size={size} color={color} />
+          ),
+        }}
+      />
       {isAdmin && (
         <Tabs.Screen
           name="inventory"
@@ -51,6 +89,17 @@ export default function TabLayout() {
             title: 'Inventory',
             tabBarIcon: ({ size, color }) => (
               <Package size={size} color={color} />
+            ),
+          }}
+        />
+      )}
+      {isAdmin && (
+        <Tabs.Screen
+          name="users"
+          options={{
+            title: 'Users',
+            tabBarIcon: ({ size, color }) => (
+              <Users size={size} color={color} />
             ),
           }}
         />
@@ -72,7 +121,7 @@ export default function TabLayout() {
           options={{
             title: 'Logs',
             tabBarIcon: ({ size, color }) => (
-              <Users size={size} color={color} />
+              <Coffee size={size} color={color} />
             ),
           }}
         />

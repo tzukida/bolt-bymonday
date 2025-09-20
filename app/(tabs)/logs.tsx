@@ -7,13 +7,15 @@ import {
   RefreshControl,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Activity, User, Clock } from 'lucide-react-native';
+import { Activity, User, Clock, ShoppingCart, Package, UserPlus, Settings } from 'lucide-react-native';
 
-interface ActivityLog {
+export interface ActivityLog {
   id: string;
   action: string;
-  role: string;
+  userId: string;
+  userRole: string;
   timestamp: string;
+  details?: any;
 }
 
 export default function LogsScreen() {
@@ -56,12 +58,20 @@ export default function LogsScreen() {
   const getActionIcon = (action: string) => {
     if (action.includes('logged in') || action.includes('logged out')) {
       return User;
+    } else if (action.includes('transaction') || action.includes('Processed transaction')) {
+      return ShoppingCart;
+    } else if (action.includes('product') || action.includes('stock')) {
+      return Package;
+    } else if (action.includes('user') || action.includes('User')) {
+      return UserPlus;
+    } else if (action.includes('Email') || action.includes('supplier')) {
+      return Settings;
     }
     return Activity;
   };
 
-  return (
-    <View style={styles.container}>
+  const getRoleColor = (userRole: string) => {
+    return userRole === 'admin' ? '#4169E1' : '#228B22';
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Activity Logs</Text>
         <View style={styles.headerStats}>
@@ -100,8 +110,8 @@ export default function LogsScreen() {
                       <Text style={styles.logAction}>{log.action}</Text>
                       <View style={styles.logMeta}>
                         <View style={styles.roleTag}>
-                          <Text style={[styles.roleText, { color: getRoleColor(log.role) }]}>
-                            {log.role.toUpperCase()}
+                          <Text style={[styles.roleText, { color: getRoleColor(log.userRole) }]}>
+                            {log.userRole.toUpperCase()}
                           </Text>
                         </View>
                         <View style={styles.timestampContainer}>
@@ -110,6 +120,14 @@ export default function LogsScreen() {
                           <Text style={styles.date}>{date}</Text>
                         </View>
                       </View>
+                      {log.details && (
+                        <Text style={styles.logDetails}>
+                          {typeof log.details === 'object' 
+                            ? JSON.stringify(log.details, null, 2).slice(0, 100) + '...'
+                            : log.details
+                          }
+                        </Text>
+                      )}
                     </View>
                   </View>
                 </View>
@@ -241,5 +259,11 @@ const styles = StyleSheet.create({
   date: {
     fontSize: 12,
     color: '#888',
+  },
+  logDetails: {
+    fontSize: 11,
+    color: '#999',
+    marginTop: 4,
+    fontFamily: 'monospace',
   },
 });
