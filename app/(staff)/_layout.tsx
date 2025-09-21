@@ -1,13 +1,10 @@
 import { Tabs } from 'expo-router';
-import { Coffee, Chrome as Home, ChartBar as BarChart3, Package, Users, ShoppingCart, Bell } from 'lucide-react-native';
-import { useAuth } from '@/contexts/AuthContext';
+import { Chrome as Home, ShoppingCart, Bell } from 'lucide-react-native';
 import { useData } from '@/contexts/DataContext';
 import { View, Text } from 'react-native';
 
-export default function TabLayout() {
-  const { user } = useAuth();
+export default function StaffTabLayout() {
   const { unreadCount } = useData();
-  const isAdmin = user?.role === 'admin';
 
   const NotificationIcon = ({ size, color }: { size: number; color: string }) => (
     <View style={{ position: 'relative' }}>
@@ -35,6 +32,7 @@ export default function TabLayout() {
       )}
     </View>
   );
+
   return (
     <Tabs
       screenOptions={{
@@ -82,50 +80,6 @@ export default function TabLayout() {
           ),
         }}
       />
-      {isAdmin && (
-        <Tabs.Screen
-          name="inventory"
-          options={{
-            title: 'Inventory',
-            tabBarIcon: ({ size, color }) => (
-              <Package size={size} color={color} />
-            ),
-          }}
-        />
-      )}
-      {isAdmin && (
-        <Tabs.Screen
-          name="users"
-          options={{
-            title: 'Users',
-            tabBarIcon: ({ size, color }) => (
-              <Users size={size} color={color} />
-            ),
-          }}
-        />
-      )}
-      {isAdmin && (
-        <Tabs.Screen
-          name="reports"
-          options={{
-            title: 'Reports',
-            tabBarIcon: ({ size, color }) => (
-              <BarChart3 size={size} color={color} />
-            ),
-          }}
-        />
-      )}
-      {isAdmin && (
-        <Tabs.Screen
-          name="logs"
-          options={{
-            title: 'Logs',
-            tabBarIcon: ({ size, color }) => (
-              <Coffee size={size} color={color} />
-            ),
-          }}
-        />
-      )}
     </Tabs>
   );
 }

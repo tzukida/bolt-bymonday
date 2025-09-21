@@ -31,7 +31,8 @@ export default function LoginScreen() {
     try {
       const success = await login(username, password);
       if (success) {
-        router.replace('/(tabs)');
+        // Navigation will be handled by the index screen based on user role
+        router.replace('/');
       } else {
         Alert.alert('Error', 'Invalid credentials. Please try again.');
       }
