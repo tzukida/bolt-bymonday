@@ -9,18 +9,23 @@ type Notification = Database['public']['Tables']['notifications']['Row'];
 
 export class SupabaseService {
   // Authentication
+// supabaseService.ts
+import { supabase } from './supabaseClient';
+
+export const supabaseService = {
   login: async (username: string, password: string) => {
     const { data, error } = await supabase
       .from('users')
-      .select('*')
+      .select('id, username, role') // only get what you need
       .eq('username', username)
-      .eq('password', password) // plain text for now
-      .single();
+      .eq('password', password);
 
-    if (error || !data) {
+    if (error || !data || data.length === 0) {
+      console.log("Login failed:", error);
       return { success: false, data: null };
     }
-    return { success: true, data };
+
+    return { success: true, data: data[0] }; // return first match
   },
 
   // Users
