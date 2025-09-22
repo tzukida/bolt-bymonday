@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase';
 import { Database } from '@/types/database';
 
+// Types from generated Supabase types
 type User = Database['public']['Tables']['users']['Row'];
 type Product = Database['public']['Tables']['products']['Row'];
 type Transaction = Database['public']['Tables']['transactions']['Row'];
@@ -8,27 +9,27 @@ type ActivityLog = Database['public']['Tables']['activity_logs']['Row'];
 type Notification = Database['public']['Tables']['notifications']['Row'];
 
 export class SupabaseService {
-  // Authentication
-// supabaseService.ts
-import { supabase } from './supabaseClient';
-
-export const supabaseService = {
-  login: async (username: string, password: string) => {
+  // ----------------------
+  // 🔑 Authentication
+  // ----------------------
+  async login(username: string, password: string) {
     const { data, error } = await supabase
       .from('users')
-      .select('id, username, role') // only get what you need
+      .select('id, username, role')
       .eq('username', username)
       .eq('password', password);
 
     if (error || !data || data.length === 0) {
-      console.log("Login failed:", error);
+      console.log('Login failed:', error);
       return { success: false, data: null };
     }
 
-    return { success: true, data: data[0] }; // return first match
-  },
+    return { success: true, data: data[0] as User };
+  }
 
-  // Users
+  // ----------------------
+  // 👤 Users
+  // ----------------------
   async getUsers() {
     try {
       const { data, error } = await supabase
@@ -37,7 +38,7 @@ export const supabaseService = {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return { success: true, data };
+      return { success: true, data: data as User[] };
     } catch (error) {
       return { success: false, error: (error as Error).message };
     }
@@ -52,7 +53,7 @@ export const supabaseService = {
         .single();
 
       if (error) throw error;
-      return { success: true, data };
+      return { success: true, data: data as User };
     } catch (error) {
       return { success: false, error: (error as Error).message };
     }
@@ -68,7 +69,7 @@ export const supabaseService = {
         .single();
 
       if (error) throw error;
-      return { success: true, data };
+      return { success: true, data: data as User };
     } catch (error) {
       return { success: false, error: (error as Error).message };
     }
@@ -76,11 +77,7 @@ export const supabaseService = {
 
   async deleteUser(id: string) {
     try {
-      const { error } = await supabase
-        .from('users')
-        .delete()
-        .eq('id', id);
-
+      const { error } = await supabase.from('users').delete().eq('id', id);
       if (error) throw error;
       return { success: true };
     } catch (error) {
@@ -88,7 +85,9 @@ export const supabaseService = {
     }
   }
 
-  // Products
+  // ----------------------
+  // 📦 Products
+  // ----------------------
   async getProducts() {
     try {
       const { data, error } = await supabase
@@ -97,7 +96,7 @@ export const supabaseService = {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return { success: true, data };
+      return { success: true, data: data as Product[] };
     } catch (error) {
       return { success: false, error: (error as Error).message };
     }
@@ -112,7 +111,7 @@ export const supabaseService = {
         .single();
 
       if (error) throw error;
-      return { success: true, data };
+      return { success: true, data: data as Product };
     } catch (error) {
       return { success: false, error: (error as Error).message };
     }
@@ -128,7 +127,7 @@ export const supabaseService = {
         .single();
 
       if (error) throw error;
-      return { success: true, data };
+      return { success: true, data: data as Product };
     } catch (error) {
       return { success: false, error: (error as Error).message };
     }
@@ -136,11 +135,7 @@ export const supabaseService = {
 
   async deleteProduct(id: string) {
     try {
-      const { error } = await supabase
-        .from('products')
-        .delete()
-        .eq('id', id);
-
+      const { error } = await supabase.from('products').delete().eq('id', id);
       if (error) throw error;
       return { success: true };
     } catch (error) {
@@ -148,7 +143,9 @@ export const supabaseService = {
     }
   }
 
-  // Transactions
+  // ----------------------
+  // 💰 Transactions
+  // ----------------------
   async getTransactions() {
     try {
       const { data, error } = await supabase
@@ -157,7 +154,7 @@ export const supabaseService = {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return { success: true, data };
+      return { success: true, data: data as Transaction[] };
     } catch (error) {
       return { success: false, error: (error as Error).message };
     }
@@ -172,13 +169,15 @@ export const supabaseService = {
         .single();
 
       if (error) throw error;
-      return { success: true, data };
+      return { success: true, data: data as Transaction };
     } catch (error) {
       return { success: false, error: (error as Error).message };
     }
   }
 
-  // Activity Logs
+  // ----------------------
+  // 📝 Activity Logs
+  // ----------------------
   async getActivityLogs() {
     try {
       const { data, error } = await supabase
@@ -188,7 +187,7 @@ export const supabaseService = {
         .limit(100);
 
       if (error) throw error;
-      return { success: true, data };
+      return { success: true, data: data as ActivityLog[] };
     } catch (error) {
       return { success: false, error: (error as Error).message };
     }
@@ -203,13 +202,15 @@ export const supabaseService = {
         .single();
 
       if (error) throw error;
-      return { success: true, data };
+      return { success: true, data: data as ActivityLog };
     } catch (error) {
       return { success: false, error: (error as Error).message };
     }
   }
 
-  // Notifications
+  // ----------------------
+  // 🔔 Notifications
+  // ----------------------
   async getNotifications() {
     try {
       const { data, error } = await supabase
@@ -218,7 +219,7 @@ export const supabaseService = {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return { success: true, data };
+      return { success: true, data: data as Notification[] };
     } catch (error) {
       return { success: false, error: (error as Error).message };
     }
@@ -233,7 +234,7 @@ export const supabaseService = {
         .single();
 
       if (error) throw error;
-      return { success: true, data };
+      return { success: true, data: data as Notification };
     } catch (error) {
       return { success: false, error: (error as Error).message };
     }
@@ -249,7 +250,7 @@ export const supabaseService = {
         .single();
 
       if (error) throw error;
-      return { success: true, data };
+      return { success: true, data: data as Notification };
     } catch (error) {
       return { success: false, error: (error as Error).message };
     }
@@ -264,11 +265,12 @@ export const supabaseService = {
         .select();
 
       if (error) throw error;
-      return { success: true, data };
+      return { success: true, data: data as Notification[] };
     } catch (error) {
       return { success: false, error: (error as Error).message };
     }
   }
 }
 
+// Export a singleton instance
 export const supabaseService = new SupabaseService();
