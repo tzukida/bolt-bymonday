@@ -17,7 +17,7 @@ export const APP_CONFIG = {
 
   // Feature Flags - Get from Expo Constants
   features: {
-    useBackend: Constants.expoConfig?.extra?.useBackend || false,
+    useBackend: Constants.expoConfig?.extra?.useBackend ?? true,
     enableNotifications: true,
     enableActivityLogs: true,
     enableUserManagement: true,
