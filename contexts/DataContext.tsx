@@ -1,7 +1,7 @@
 // context/DataContext.tsx
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { supabaseService } from '@/lib/supabaseService';
+import { supabaseService } from '@/lib/supabase';
 import { APP_CONFIG } from '@/config/appConfig';
 import { Database } from '@/types/database';
 import { SAMPLE_PRODUCTS, SAMPLE_USERS } from '@/lib/sampleData';
