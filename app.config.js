@@ -1,5 +1,4 @@
-require('dotenv').config(); // Load .env file // This requires the dotenv package to be installed
-
+// app.config.js
 export default {
   expo: {
     name: "bolt-expo-nativewind",
@@ -11,7 +10,7 @@ export default {
     userInterfaceStyle: "automatic",
     newArchEnabled: true,
     ios: {
-      supportsTablet: true
+      supportsTablet: true,
     },
     web: {
       bundler: "metro",
@@ -22,9 +21,12 @@ export default {
     experiments: {
       typedRoutes: true
     },
+    // Add environment variables here
     extra: {
       supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
       supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
+      apiUrl: process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api',
+      useBackend: process.env.EXPO_PUBLIC_USE_BACKEND === 'true' || false,
     },
   },
 };
