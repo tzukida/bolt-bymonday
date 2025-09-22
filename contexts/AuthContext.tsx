@@ -22,8 +22,54 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    loadUser();
+    console.log('🔧 AuthProvider mounted');
+    console.log('🔧 useBackend flag:', APP_CONFIG.features.useBackend);
   }, []);
+
+  const login = async (username: string, password: string): Promise<boolean> => {
+    try {
+      console.log('🔧 Login - useBackend flag:', APP_CONFIG.features.useBackend);
+      let foundUser = null;
+
+      if (APP_CONFIG.features.useBackend) {
+        console.log('🚀 Using Supabase backend login');
+        const result = await supabaseService.login(username, password);
+        console.log('📋 Supabase login result:', result);
+        
+        if (result.success) {
+          foundUser = result.data;
+        } else {
+          console.error('❌ Supabase login failed:', result.error);
+        }
+      } else {
+        console.log('💾 Using local storage login');
+        // Get users from storage
+        const usersData = await AsyncStorage.getItem('users');
+        const users = usersData ? JSON.parse(usersData) : [];
+        
+        console.log('📋 Local users:', users);
+        foundUser = users.find(
+          (u: any) => u.username === username && u.password === password
+        );
+      }
+
+      console.log('👤 Found user:', foundUser);
+      
+      if (foundUser) {
+        const userData = { username: foundUser.username, role: foundUser.role };
+        setUser(userData);
+        await AsyncStorage.setItem('user', JSON.stringify(userData));
+        
+        await logActivity(`User ${username} logged in`, foundUser.role);
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('💥 Login error:', error);
+      return false;
+    }
+  };
 
   const loadUser = async () => {
     try {
