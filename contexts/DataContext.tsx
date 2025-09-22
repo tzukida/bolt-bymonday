@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from './AuthContext';
+import { supabaseService } from '@/services/supabaseService';
+import { APP_CONFIG } from '@/config/app';
 
 export interface Product {
   id: string;
@@ -166,35 +168,51 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   const loadData = async () => {
     try {
-      // Load products
-      const productsData = await AsyncStorage.getItem('products');
-      if (productsData) {
-        setProducts(JSON.parse(productsData));
+      if (APP_CONFIG.features.useBackend) {
+        // Load from Supabase
+        const [productsResult, transactionsResult, usersResult, notificationsResult, logsResult] = await Promise.all([
+          supabaseService.getProducts(),
+          supabaseService.getTransactions(),
+          supabaseService.getUsers(),
+          supabaseService.getNotifications(),
+          supabaseService.getActivityLogs()
+        ]);
+
+        if (productsResult.success) setProducts(productsResult.data || []);
+        if (transactionsResult.success) setTransactions(transactionsResult.data || []);
+        if (usersResult.success) setUsers(usersResult.data || []);
+        if (notificationsResult.success) setNotifications(notificationsResult.data || []);
       } else {
-        // Initialize with sample data
-        await AsyncStorage.setItem('products', JSON.stringify(SAMPLE_PRODUCTS));
-        setProducts(SAMPLE_PRODUCTS);
-      }
+        // Load from local storage
+        const productsData = await AsyncStorage.getItem('products');
+        if (productsData) {
+          setProducts(JSON.parse(productsData));
+        } else {
+          // Initialize with sample data
+          await AsyncStorage.setItem('products', JSON.stringify(SAMPLE_PRODUCTS));
+          setProducts(SAMPLE_PRODUCTS);
+        }
 
-      // Load transactions
-      const transactionsData = await AsyncStorage.getItem('transactions');
-      if (transactionsData) {
-        setTransactions(JSON.parse(transactionsData));
-      }
+        // Load transactions
+        const transactionsData = await AsyncStorage.getItem('transactions');
+        if (transactionsData) {
+          setTransactions(JSON.parse(transactionsData));
+        }
 
-      // Load users
-      const usersData = await AsyncStorage.getItem('users');
-      if (usersData) {
-        setUsers(JSON.parse(usersData));
-      } else {
-        await AsyncStorage.setItem('users', JSON.stringify(SAMPLE_USERS));
-        setUsers(SAMPLE_USERS);
-      }
+        // Load users
+        const usersData = await AsyncStorage.getItem('users');
+        if (usersData) {
+          setUsers(JSON.parse(usersData));
+        } else {
+          await AsyncStorage.setItem('users', JSON.stringify(SAMPLE_USERS));
+          setUsers(SAMPLE_USERS);
+        }
 
-      // Load notifications
-      const notificationsData = await AsyncStorage.getItem('notifications');
-      if (notificationsData) {
-        setNotifications(JSON.parse(notificationsData));
+        // Load notifications
+        const notificationsData = await AsyncStorage.getItem('notifications');
+        if (notificationsData) {
+          setNotifications(JSON.parse(notificationsData));
+        }
       }
     } catch (error) {
       console.error('Error loading data:', error);
@@ -248,22 +266,33 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       const log: ActivityLog = {
         id: Date.now().toString(),
         action,
-        userId: user.username,
+        user_id: user.username,
         userRole: user.role,
+        type: 'system',
         timestamp: new Date().toISOString(),
         details,
       };
       
-      const existingLogs = await AsyncStorage.getItem('activityLogs');
-      const logs = existingLogs ? JSON.parse(existingLogs) : [];
-      
-      logs.unshift(log);
-      // Keep only last 100 logs
-      if (logs.length > 100) {
-        logs.splice(100);
+      if (APP_CONFIG.features.useBackend) {
+        await supabaseService.createActivityLog({
+          action,
+          user_id: user.username,
+          user_role: user.role,
+          type: 'system',
+          details,
+        });
+      } else {
+        const existingLogs = await AsyncStorage.getItem('activityLogs');
+        const logs = existingLogs ? JSON.parse(existingLogs) : [];
+        
+        logs.unshift(log);
+        // Keep only last 100 logs
+        if (logs.length > 100) {
+          logs.splice(100);
+        }
+        
+        await AsyncStorage.setItem('activityLogs', JSON.stringify(logs));
       }
-      
-      await AsyncStorage.setItem('activityLogs', JSON.stringify(logs));
     } catch (error) {
       console.error('Error logging activity:', error);
     }
@@ -331,15 +360,24 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   const addProduct = async (product: Omit<Product, 'id'>) => {
     try {
-      const newProduct: Product = {
-        ...product,
-        id: Date.now().toString(),
-      };
+      if (APP_CONFIG.features.useBackend) {
+        const result = await supabaseService.createProduct(product);
+        if (result.success && result.data) {
+          const updatedProducts = [...products, result.data];
+          setProducts(updatedProducts);
+          await logActivity(`Added new product: ${result.data.name}`, { productId: result.data.id });
+        }
+      } else {
+        const newProduct: Product = {
+          ...product,
+          id: Date.now().toString(),
+        };
 
-      const updatedProducts = [...products, newProduct];
-      setProducts(updatedProducts);
-      await AsyncStorage.setItem('products', JSON.stringify(updatedProducts));
-      await logActivity(`Added new product: ${newProduct.name}`, { productId: newProduct.id });
+        const updatedProducts = [...products, newProduct];
+        setProducts(updatedProducts);
+        await AsyncStorage.setItem('products', JSON.stringify(updatedProducts));
+        await logActivity(`Added new product: ${newProduct.name}`, { productId: newProduct.id });
+      }
     } catch (error) {
       console.error('Error adding product:', error);
     }

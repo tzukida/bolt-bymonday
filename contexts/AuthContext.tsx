@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { supabaseService } from '@/services/supabaseService';
+import { APP_CONFIG } from '@/config/app';
 
 export interface User {
   username: string;
@@ -38,13 +40,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (username: string, password: string): Promise<boolean> => {
     try {
-      // Get users from storage
-      const usersData = await AsyncStorage.getItem('users');
-      const users = usersData ? JSON.parse(usersData) : [];
-      
-      const foundUser = users.find(
-        (u: any) => u.username === username && u.password === password
-      );
+      let foundUser = null;
+
+      if (APP_CONFIG.features.useBackend) {
+        const result = await supabaseService.login(username, password);
+        if (result.success) {
+          foundUser = result.data;
+        }
+      } else {
+        // Get users from storage
+        const usersData = await AsyncStorage.getItem('users');
+        const users = usersData ? JSON.parse(usersData) : [];
+        
+        foundUser = users.find(
+          (u: any) => u.username === username && u.password === password
+        );
+      }
 
       if (foundUser) {
         const userData = { username: foundUser.username, role: foundUser.role };

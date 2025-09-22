@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Clock, User, ShoppingCart, Package, Mail, Settings } from 'lucide-react-native';
-import { useData } from '../../contexts/DataContext';
+import { useData } from '@/contexts/DataContext';
 
 const getActivityIcon = (type: string) => {
   switch (type) {
@@ -79,14 +79,16 @@ export default function ActivityLogs() {
                 </View>
                 <View style={styles.logContent}>
                   <Text style={styles.logAction}>{log.action}</Text>
-                  <Text style={styles.logUser}>by {log.user} ({log.role})</Text>
+                  <Text style={styles.logUser}>by {log.userId} ({log.userRole})</Text>
                 </View>
                 <Text style={styles.logTime}>
                   {formatDate(log.timestamp)}
                 </Text>
               </View>
               {log.details && (
-                <Text style={styles.logDetails}>{log.details}</Text>
+                <Text style={styles.logDetails}>
+                  {typeof log.details === 'string' ? log.details : JSON.stringify(log.details)}
+                </Text>
               )}
             </TouchableOpacity>
           ))
