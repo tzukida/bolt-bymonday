@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabaseService } from '@/services/supabaseService';
-import { APP_CONFIG } from '@/config/appConfig';
+import { APP_CONFIG } from '@/config/app';
 
 export interface User {
   username: string;
