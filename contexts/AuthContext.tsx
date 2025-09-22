@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { supabaseService } from '@/services/supabaseService';
+import { supabaseService } from '@/services/supabase';
 import { APP_CONFIG } from '@/config/app';
 
 export interface User {
