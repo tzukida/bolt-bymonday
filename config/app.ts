@@ -1,22 +1,23 @@
-// App Configuration
-// This file contains all the configuration settings for the app
+// app.ts or config/app.ts
+import Constants from 'expo-constants';
 
+// App Configuration
 export const APP_CONFIG = {
   // App Information
   name: 'ByMonday',
   version: '1.0.0',
   description: 'Inventory & POS Management System',
 
-  // API Configuration
+  // API Configuration - Get from Expo Constants
   api: {
-    baseUrl: process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api',
+    baseUrl: Constants.expoConfig?.extra?.apiUrl || 'http://localhost:3000/api',
     timeout: 10000, // 10 seconds
     retryAttempts: 3,
   },
 
-  // Feature Flags
+  // Feature Flags - Get from Expo Constants
   features: {
-    useBackend: process.env.EXPO_PUBLIC_USE_BACKEND === 'true' || false,
+    useBackend: Constants.expoConfig?.extra?.useBackend || false,
     enableNotifications: true,
     enableActivityLogs: true,
     enableUserManagement: true,
