@@ -1,4 +1,4 @@
-import 'dotenv/config'; // This requires the dotenv package to be installed
+require('dotenv').config(); // Load .env file // This requires the dotenv package to be installed
 
 export default {
   expo: {
