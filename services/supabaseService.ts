@@ -9,21 +9,19 @@ type Notification = Database['public']['Tables']['notifications']['Row'];
 
 export class SupabaseService {
   // Authentication
-  async login(username: string, password: string) {
-    try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('username', username)
-        .eq('password', password)
-        .single();
+  login: async (username: string, password: string) => {
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('username', username)
+      .eq('password', password) // plain text for now
+      .single();
 
-      if (error) throw error;
-      return { success: true, data };
-    } catch (error) {
-      return { success: false, error: (error as Error).message };
+    if (error || !data) {
+      return { success: false, data: null };
     }
-  }
+    return { success: true, data };
+  },
 
   // Users
   async getUsers() {
