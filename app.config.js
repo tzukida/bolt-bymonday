@@ -21,12 +21,11 @@ export default {
     experiments: {
       typedRoutes: true
     },
-    // Add environment variables here
     extra: {
       supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
       supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
       apiUrl: process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000/api',
-      useBackend: process.env.EXPO_PUBLIC_USE_BACKEND === 'true',
+      useBackend: process.env.EXPO_PUBLIC_USE_BACKEND === 'true' || true, // Default to true
     },
   },
 };
