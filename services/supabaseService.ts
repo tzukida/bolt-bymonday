@@ -8,42 +8,15 @@ type ActivityLog = Database['public']['Tables']['activity_logs']['Row'];
 type Notification = Database['public']['Tables']['notifications']['Row'];
 
 export class SupabaseService {
-  // ---------------- AUTH ----------------
-  async signup(email: string, password: string, extraData?: Database['public']['Tables']['users']['Insert']) {
+  // Authentication
+  async login(username: string, password: string) {
     try {
-      // 1) Create in Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-      });
-
-      if (authError) throw authError;
-
-      // 2) Insert into users table (link with auth user id)
-      const { data: profile, error: profileError } = await supabase
+      const { data, error } = await supabase
         .from('users')
-        .insert({
-          id: authData.user?.id, // make sure your "users" table id = auth user id (UUID)
-          email,
-          ...extraData,
-        })
-        .select()
+        .select('*')
+        .eq('username', username)
+        .eq('password', password)
         .single();
-
-      if (profileError) throw profileError;
-
-      return { success: true, data: { user: authData.user, profile } };
-    } catch (error) {
-      return { success: false, error: (error as Error).message };
-    }
-  }
-
-  async login(email: string, password: string) {
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
 
       if (error) throw error;
       return { success: true, data };
@@ -52,17 +25,7 @@ export class SupabaseService {
     }
   }
 
-  async logout() {
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      return { success: true };
-    } catch (error) {
-      return { success: false, error: (error as Error).message };
-    }
-  }
-
-  // ---------------- USERS ----------------
+  // Users
   async getUsers() {
     try {
       const { data, error } = await supabase
@@ -110,7 +73,11 @@ export class SupabaseService {
 
   async deleteUser(id: string) {
     try {
-      const { error } = await supabase.from('users').delete().eq('id', id);
+      const { error } = await supabase
+        .from('users')
+        .delete()
+        .eq('id', id);
+
       if (error) throw error;
       return { success: true };
     } catch (error) {
@@ -118,7 +85,7 @@ export class SupabaseService {
     }
   }
 
-  // ---------------- PRODUCTS ----------------
+  // Products
   async getProducts() {
     try {
       const { data, error } = await supabase
@@ -166,7 +133,11 @@ export class SupabaseService {
 
   async deleteProduct(id: string) {
     try {
-      const { error } = await supabase.from('products').delete().eq('id', id);
+      const { error } = await supabase
+        .from('products')
+        .delete()
+        .eq('id', id);
+
       if (error) throw error;
       return { success: true };
     } catch (error) {
@@ -174,7 +145,7 @@ export class SupabaseService {
     }
   }
 
-  // ---------------- TRANSACTIONS ----------------
+  // Transactions
   async getTransactions() {
     try {
       const { data, error } = await supabase
@@ -204,7 +175,7 @@ export class SupabaseService {
     }
   }
 
-  // ---------------- ACTIVITY LOGS ----------------
+  // Activity Logs
   async getActivityLogs() {
     try {
       const { data, error } = await supabase
@@ -235,7 +206,7 @@ export class SupabaseService {
     }
   }
 
-  // ---------------- NOTIFICATIONS ----------------
+  // Notifications
   async getNotifications() {
     try {
       const { data, error } = await supabase

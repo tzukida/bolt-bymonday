@@ -99,15 +99,6 @@ export default function LoginScreen() {
             <Text style={styles.credentialsText}>Admin: admin / admin123</Text>
             <Text style={styles.credentialsText}>Staff: staff / staff123</Text>
           </View>
-
-{/* TEMPORARY: Go to Setup Admin */}
-<TouchableOpacity
-  style={[styles.loginButton, { marginTop: 16, backgroundColor: '#556B2F' }]}
-  onPress={() => router.push('/setup-admin')}
->
-  <Text style={styles.loginButtonText}>Go to Setup Admin</Text>
-</TouchableOpacity>
-
         </View>
       </View>
     </KeyboardAvoidingView>
