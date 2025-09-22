@@ -8,7 +8,24 @@ type ActivityLog = Database['public']['Tables']['activity_logs']['Row'];
 type Notification = Database['public']['Tables']['notifications']['Row'];
 
 export class SupabaseService {
-  // Authentication
+  constructor() {
+    this.testConnection();
+  }
+
+  async testConnection() {
+    try {
+      console.log('Testing Supabase connection...');
+      const { data, error } = await supabase.from('users').select('count').limit(1);
+      
+      if (error) {
+        console.error('Supabase connection error:', error);
+      } else {
+        console.log('Supabase connection successful');
+      }
+    } catch (error) {
+      console.error('Connection test failed:', error);
+    }
+  }
   async login(username: string, password: string) {
     try {
       const { data, error } = await supabase
