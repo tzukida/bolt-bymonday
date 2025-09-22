@@ -10,26 +10,20 @@ type Notification = Database['public']['Tables']['notifications']['Row'];
 export class SupabaseService {
   // Authentication
   async login(username: string, password: string) {
-    // Find email by username
-    const { data: user, error: lookupError } = await supabase
-      .from("users")
-      .select("email")
-      .eq("username", username)
-      .single();
-  
-    if (lookupError) throw lookupError;
-  
-    // Sign in with email + password
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: user.email,
-      password,
-    });
-  
-    if (error) throw error;
-  
-    return data;
-  }
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('username', username)
+        .eq('password', password)
+        .single();
 
+      if (error) throw error;
+      return { success: true, data };
+    } catch (error) {
+      return { success: false, error: (error as Error).message };
+    }
+  }
 
   // Users
   async getUsers() {
