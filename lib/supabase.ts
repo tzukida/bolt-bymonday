@@ -14,6 +14,10 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: false, // Required for React Native
+    detectSessionInUrl: false,
   },
 });
+
+if (__DEV__) {
+  console.log('Supabase initialized with URL:', supabaseUrl);
+}
