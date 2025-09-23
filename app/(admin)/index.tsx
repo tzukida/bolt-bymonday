@@ -22,16 +22,23 @@ export default function DashboardScreen() {
   const lowStockProducts = getLowStockProducts();
   const totalProducts = products.length;
 
-  const handleLogout = () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Logout', onPress: logout },
-      ]
-    );
-  };
+const handleLogout = () => {
+  Alert.alert(
+    'Logout',
+    'Are you sure you want to logout?',
+    [
+      { text: 'Cancel', style: 'cancel' },
+      { 
+        text: 'Logout',
+        onPress: async () => {
+          await logout();
+          router.replace('/login'); // ✅ redirect to login after logout
+        }
+      },
+    ]
+  );
+};
+
 
   const DashboardCard = ({ title, value, subtitle, icon: Icon, color, onPress }: any) => (
     <TouchableOpacity style={[styles.card, { borderLeftColor: color }]} onPress={onPress}>
