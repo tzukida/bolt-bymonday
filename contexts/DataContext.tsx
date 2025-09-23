@@ -1,6 +1,6 @@
 // context/DataContext.tsx
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { supabaseService } from "@/services/SupabaseService";
+import { supabaseService } from "@/services/supabaseService";
 
 type DataContextType = {
   products: any[];
