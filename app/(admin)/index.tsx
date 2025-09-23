@@ -22,16 +22,26 @@ export default function DashboardScreen() {
   const lowStockProducts = getLowStockProducts();
   const totalProducts = products.length;
 
-  const handleLogout = () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Logout', onPress: logout },
-      ]
-    );
-  };
+const logout = async () => {
+  if (user) {
+    if (APP_CONFIG.features.useBackend) {
+      await supabaseService.createActivityLog({
+        action: `User ${user.username} logged out`,
+        user_id: user.username,
+        user_role: user.role,
+        type: 'logout',
+      });
+      await supabase.auth.signOut();
+    } else {
+      await logActivity(`User ${user.username} logged out`, user.role);
+    }
+  }
+
+  setUser(null);
+  await AsyncStorage.removeItem('user');
+  router.replace('/login'); // ✅ navigate away after logout
+};
+
 
   const DashboardCard = ({ title, value, subtitle, icon: Icon, color, onPress }: any) => (
     <TouchableOpacity style={[styles.card, { borderLeftColor: color }]} onPress={onPress}>
