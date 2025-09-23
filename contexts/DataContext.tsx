@@ -1,5 +1,5 @@
 // contexts/DataContext.tsx
-import { supabaseServices } from "../services/supabaseServices";
+import { supabaseServices } from "@/services/supabaseServices";
 
 
 const refreshData = async () => {
