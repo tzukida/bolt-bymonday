@@ -1,81 +1,71 @@
-// src/contexts/DataContext.tsx
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { supabaseService } from '@/services/supabaseService';
+// contexts/DataContext.tsx
+import React, { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { SupabaseService } from "../services/supabaseService";
 
-type Product = any;
-type Transaction = any;
-type User = any;
-
-type DataContextType = {
-  products: Product[];
-  transactions: Transaction[];
-  users: User[];
-  lowStockProducts: Product[];
+interface DataContextType {
+  products: number;
+  low: number;
+  users: number;
+  transactions: number;
   todaysSales: number;
+  unreadCount: number;
   refreshData: () => Promise<void>;
-  createTransaction: (payload: Partial<Transaction>) => Promise<{ success: boolean; data?: any; error?: string }>;
-};
+}
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
-export const DataProvider = ({ children }: { children: React.ReactNode }) => {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
-  const [lowStockProducts, setLowStockProducts] = useState<Product[]>([]);
-  const [todaysSales, setTodaysSales] = useState<number>(0);
+export const DataProvider = ({ children }: { children: ReactNode }) => {
+  const [products, setProducts] = useState(0);
+  const [low, setLow] = useState(0);
+  const [users, setUsers] = useState(0);
+  const [transactions, setTransactions] = useState(0);
+  const [todaysSales, setTodaysSales] = useState(0);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const refreshData = async () => {
-    try {
-      console.log('DataContext.refreshData: fetching all data...');
-      const [p, u, t, low, sales] = await Promise.all([
-        supabaseService.getProducts(),
-        supabaseService.getUsers(),
-        supabaseService.getTransactions(),
-        supabaseService.getLowStockProducts(),
-        supabaseService.getTodaysSales(), // NUMBER
+    console.log("DataContext.refreshData: fetching all data...");
+
+    const [productsCount, lowStock, usersCount, transactionsCount, todaysSalesAmount, unread] =
+      await Promise.all([
+        SupabaseService.getProducts(),
+        SupabaseService.getLowStock(),
+        SupabaseService.getUsers(),
+        SupabaseService.getTransactions(),
+        SupabaseService.getTodaysSales(),
+        SupabaseService.getUnreadCount(),
       ]);
 
-      setProducts(p);
-      setUsers(u);
-      setTransactions(t);
-      setLowStockProducts(low);
-      setTodaysSales(sales ?? 0);
-      console.log('DataContext.refreshData: done', { products: p.length, users: u.length, transactions: t.length, low: low.length, todaysSales: sales });
-    } catch (err) {
-      console.error('DataContext.refreshData error:', err);
-    }
-  };
+    setProducts(productsCount ?? 0);
+    setLow(lowStock ?? 0);
+    setUsers(usersCount ?? 0);
+    setTransactions(transactionsCount ?? 0);
+    setTodaysSales(todaysSalesAmount ?? 0);
+    setUnreadCount(unread ?? 0);
 
-  const createTransaction = async (payload: Partial<Transaction>) => {
-    try {
-      const result = await supabaseService.createTransaction(payload);
-      if (result.success) {
-        // refresh to update products/transactions/totals
-        await refreshData();
-      }
-      return result;
-    } catch (err) {
-      console.error('createTransaction error:', err);
-      return { success: false, error: (err as Error).message };
-    }
+    console.log("DataContext.refreshData: done", {
+      products: productsCount,
+      low: lowStock,
+      users: usersCount,
+      transactions: transactionsCount,
+      todaysSales: todaysSalesAmount,
+      unread,
+    });
   };
 
   useEffect(() => {
     refreshData();
-    // optionally setup realtime here
   }, []);
 
   return (
     <DataContext.Provider
       value={{
         products,
-        transactions,
+        low,
         users,
-        lowStockProducts,
+        transactions,
         todaysSales,
+        unreadCount,
         refreshData,
-        createTransaction,
       }}
     >
       {children}
@@ -84,7 +74,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
 };
 
 export const useData = () => {
-  const ctx = useContext(DataContext);
-  if (!ctx) throw new Error('useData must be used within DataProvider');
-  return ctx;
+  const context = useContext(DataContext);
+  if (!context) throw new Error("useData must be used inside DataProvider");
+  return context;
 };
