@@ -25,15 +25,17 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 export const DataProvider = ({ children }: { children: React.ReactNode }) => {
   const [products, setProducts] = useState<Product[]>([]);
 
-  const fetchProducts = async () => {
-    if (APP_CONFIG.features.useBackend) {
-      const { data, error } = await supabase.from('products').select('*');
-      if (!error && data) setProducts(data as Product[]);
-    } else {
-      const stored = await AsyncStorage.getItem('products');
-      if (stored) setProducts(JSON.parse(stored));
-    }
-  };
+const fetchProducts = async () => {
+  console.log("Fetching products...");
+  const { data, error } = await supabase.from('products').select('*');
+  if (error) {
+    console.error("Supabase fetch error:", error.message);
+  } else {
+    console.log("Supabase data:", data);
+    setProducts(data as Product[]);
+  }
+};
+
 
   const addProduct = async (product: Omit<Product, 'id'>) => { /* same as before */ };
   const deleteProduct = async (id: string) => { /* same as before */ };
