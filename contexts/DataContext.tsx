@@ -39,8 +39,9 @@ export interface User {
 export interface ActivityLog {
   id: string;
   action: string;
-  userId: string;
-  userRole: string;
+  user_id: string;
+  user_role: string;
+  type: string;
   timestamp: string;
   details?: any;
 }
@@ -59,7 +60,9 @@ interface DataContextType {
   transactions: Transaction[];
   users: User[];
   notifications: Notification[];
+  activityLogs: ActivityLog[];
   unreadCount: number;
+  isLoading: boolean;
   updateProductStock: (productId: string, newStock: number) => Promise<void>;
   addTransaction: (transaction: Omit<Transaction, 'id' | 'timestamp'>) => Promise<void>;
   addProduct: (product: Omit<Product, 'id'>) => Promise<void>;
@@ -154,11 +157,14 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     loadData();
-    checkLowStock();
+    const interval = setInterval(checkLowStock, 5 * 60 * 1000); // Check every 5 minutes
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -168,9 +174,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   const loadData = async () => {
     try {
+      setIsLoading(true);
       if (APP_CONFIG.features.useBackend) {
         // Load from Supabase
-        const [productsResult, transactionsResult, usersResult, notificationsResult, logsResult] = await Promise.all([
+        console.log('Loading data from Supabase...');
+        const [productsResult, transactionsResult, usersResult, notificationsResult, activityLogsResult] = await Promise.all([
           supabaseService.getProducts(),
           supabaseService.getTransactions(),
           supabaseService.getUsers(),
@@ -178,12 +186,66 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           supabaseService.getActivityLogs()
         ]);
 
-        if (productsResult.success) setProducts(productsResult.data || []);
-        if (transactionsResult.success) setTransactions(transactionsResult.data || []);
-        if (usersResult.success) setUsers(usersResult.data || []);
-        if (notificationsResult.success) setNotifications(notificationsResult.data || []);
+        if (productsResult.success && productsResult.data) {
+          console.log('Products loaded:', productsResult.data.length);
+          setProducts(productsResult.data);
+        } else {
+          console.error('Failed to load products:', productsResult.error);
+          setProducts(SAMPLE_PRODUCTS);
+        }
+
+        if (transactionsResult.success && transactionsResult.data) {
+          console.log('Transactions loaded:', transactionsResult.data.length);
+          // Transform transactions to match our interface
+          const transformedTransactions = transactionsResult.data.map((t: any) => ({
+            ...t,
+            timestamp: t.created_at,
+            userId: t.user_id
+          }));
+          setTransactions(transformedTransactions);
+        } else {
+          console.error('Failed to load transactions:', transactionsResult.error);
+          setTransactions([]);
+        }
+
+        if (usersResult.success && usersResult.data) {
+          console.log('Users loaded:', usersResult.data.length);
+          setUsers(usersResult.data);
+        } else {
+          console.error('Failed to load users:', usersResult.error);
+          setUsers(SAMPLE_USERS);
+        }
+
+        if (notificationsResult.success && notificationsResult.data) {
+          console.log('Notifications loaded:', notificationsResult.data.length);
+          // Transform notifications to match our interface
+          const transformedNotifications = notificationsResult.data.map((n: any) => ({
+            ...n,
+            timestamp: n.created_at
+          }));
+          setNotifications(transformedNotifications);
+        } else {
+          console.error('Failed to load notifications:', notificationsResult.error);
+          setNotifications([]);
+        }
+
+        if (activityLogsResult.success && activityLogsResult.data) {
+          console.log('Activity logs loaded:', activityLogsResult.data.length);
+          // Transform activity logs to match our interface
+          const transformedLogs = activityLogsResult.data.map((log: any) => ({
+            ...log,
+            timestamp: log.created_at,
+            userId: log.user_id,
+            userRole: log.user_role
+          }));
+          setActivityLogs(transformedLogs);
+        } else {
+          console.error('Failed to load activity logs:', activityLogsResult.error);
+          setActivityLogs([]);
+        }
       } else {
         // Load from local storage
+        console.log('Loading data from local storage...');
         const productsData = await AsyncStorage.getItem('products');
         if (productsData) {
           setProducts(JSON.parse(productsData));
@@ -213,11 +275,22 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         if (notificationsData) {
           setNotifications(JSON.parse(notificationsData));
         }
+
+        // Load activity logs
+        const activityLogsData = await AsyncStorage.getItem('activityLogs');
+        if (activityLogsData) {
+          setActivityLogs(JSON.parse(activityLogsData));
+        }
       }
     } catch (error) {
       console.error('Error loading data:', error);
       setProducts(SAMPLE_PRODUCTS);
       setUsers(SAMPLE_USERS);
+      setTransactions([]);
+      setNotifications([]);
+      setActivityLogs([]);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -263,25 +336,35 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     if (!user) return;
     
     try {
-      const log: ActivityLog = {
-        id: Date.now().toString(),
-        action,
-        user_id: user.username,
-        userRole: user.role,
-        type: 'system',
-        timestamp: new Date().toISOString(),
-        details,
-      };
-      
       if (APP_CONFIG.features.useBackend) {
-        await supabaseService.createActivityLog({
+        const result = await supabaseService.createActivityLog({
           action,
           user_id: user.username,
           user_role: user.role,
           type: 'system',
           details,
         });
+        
+        if (result.success && result.data) {
+          const transformedLog = {
+            ...result.data,
+            timestamp: result.data.created_at,
+            userId: result.data.user_id,
+            userRole: result.data.user_role
+          };
+          setActivityLogs(prev => [transformedLog, ...prev.slice(0, 99)]);
+        }
       } else {
+        const log: ActivityLog = {
+          id: Date.now().toString(),
+          action,
+          user_id: user.username,
+          user_role: user.role,
+          type: 'system',
+          timestamp: new Date().toISOString(),
+          details,
+        };
+        
         const existingLogs = await AsyncStorage.getItem('activityLogs');
         const logs = existingLogs ? JSON.parse(existingLogs) : [];
         
@@ -292,6 +375,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         }
         
         await AsyncStorage.setItem('activityLogs', JSON.stringify(logs));
+        setActivityLogs(logs);
       }
     } catch (error) {
       console.error('Error logging activity:', error);
@@ -313,43 +397,104 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   const addTransaction = async (transaction: Omit<Transaction, 'id' | 'timestamp'>) => {
     try {
-      const newTransaction: Transaction = {
-        ...transaction,
-        id: Date.now().toString(),
-        timestamp: new Date().toISOString(),
-      };
+      if (APP_CONFIG.features.useBackend) {
+        // Create transaction in Supabase
+        const result = await supabaseService.createTransaction({
+          items: transaction.items,
+          total: transaction.total,
+          payment_method: transaction.paymentMethod,
+          user_id: transaction.userId,
+        });
 
-      // Update product stocks
-      for (const item of transaction.items) {
-        await updateProductStock(item.product.id, item.product.stock - item.quantity);
+        if (result.success && result.data) {
+          const newTransaction: Transaction = {
+            ...result.data,
+            id: result.data.id,
+            timestamp: result.data.created_at,
+            paymentMethod: result.data.payment_method,
+            userId: result.data.user_id,
+          };
+
+          // Update product stocks in Supabase
+          for (const item of transaction.items) {
+            const updatedProduct = {
+              ...item.product,
+              stock: item.product.stock - item.quantity
+            };
+            await supabaseService.updateProduct(item.product.id, updatedProduct);
+          }
+
+          // Refresh products from database
+          const productsResult = await supabaseService.getProducts();
+          if (productsResult.success && productsResult.data) {
+            setProducts(productsResult.data);
+          }
+
+          setTransactions(prev => [newTransaction, ...prev]);
+          
+          await logActivity(`Processed transaction #${newTransaction.id.slice(-6)}`, {
+            transactionId: newTransaction.id,
+            total: newTransaction.total,
+            paymentMethod: newTransaction.paymentMethod,
+            itemCount: newTransaction.items.length,
+          });
+        }
+      } else {
+        const newTransaction: Transaction = {
+          ...transaction,
+          id: Date.now().toString(),
+          timestamp: new Date().toISOString(),
+        };
+
+        // Update product stocks
+        for (const item of transaction.items) {
+          await updateProductStock(item.product.id, item.product.stock - item.quantity);
+        }
+
+        const updatedTransactions = [newTransaction, ...transactions];
+        setTransactions(updatedTransactions);
+        await AsyncStorage.setItem('transactions', JSON.stringify(updatedTransactions));
+        
+        await logActivity(`Processed transaction #${newTransaction.id.slice(-6)}`, {
+          transactionId: newTransaction.id,
+          total: newTransaction.total,
+          paymentMethod: newTransaction.paymentMethod,
+          itemCount: newTransaction.items.length,
+        });
       }
-
-      const updatedTransactions = [newTransaction, ...transactions];
-      setTransactions(updatedTransactions);
-      await AsyncStorage.setItem('transactions', JSON.stringify(updatedTransactions));
-      
-      await logActivity(`Processed transaction #${newTransaction.id.slice(-6)}`, {
-        transactionId: newTransaction.id,
-        total: newTransaction.total,
-        paymentMethod: newTransaction.paymentMethod,
-        itemCount: newTransaction.items.length,
-      });
       
       // Create transaction notification
       const notification: Notification = {
-        id: (Date.now() + 1).toString(),
+        id: Date.now().toString() + '_notif',
         title: 'Transaction Completed',
-        message: `Sale of ₱${newTransaction.total.toFixed(2)} processed successfully`,
+        message: `Sale of ₱${transaction.total.toFixed(2)} processed successfully`,
         type: 'transaction',
         timestamp: new Date().toISOString(),
         read: false,
       };
       
-      const existingNotifications = await AsyncStorage.getItem('notifications');
-      const notificationsList = existingNotifications ? JSON.parse(existingNotifications) : [];
-      notificationsList.unshift(notification);
-      await AsyncStorage.setItem('notifications', JSON.stringify(notificationsList));
-      setNotifications(notificationsList);
+      if (APP_CONFIG.features.useBackend) {
+        await supabaseService.createNotification({
+          title: notification.title,
+          message: notification.message,
+          type: notification.type,
+        });
+        // Refresh notifications
+        const notificationsResult = await supabaseService.getNotifications();
+        if (notificationsResult.success && notificationsResult.data) {
+          const transformedNotifications = notificationsResult.data.map((n: any) => ({
+            ...n,
+            timestamp: n.created_at
+          }));
+          setNotifications(transformedNotifications);
+        }
+      } else {
+        const existingNotifications = await AsyncStorage.getItem('notifications');
+        const notificationsList = existingNotifications ? JSON.parse(existingNotifications) : [];
+        notificationsList.unshift(notification);
+        await AsyncStorage.setItem('notifications', JSON.stringify(notificationsList));
+        setNotifications(notificationsList);
+      }
       
       // Check for low stock after transaction
       await checkLowStock();
@@ -385,12 +530,23 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   const updateProduct = async (product: Product) => {
     try {
-      const updatedProducts = products.map(p =>
-        p.id === product.id ? product : p
-      );
-      setProducts(updatedProducts);
-      await AsyncStorage.setItem('products', JSON.stringify(updatedProducts));
-      await logActivity(`Updated product: ${product.name}`, { productId: product.id });
+      if (APP_CONFIG.features.useBackend) {
+        const result = await supabaseService.updateProduct(product.id, product);
+        if (result.success && result.data) {
+          const updatedProducts = products.map(p =>
+            p.id === product.id ? result.data : p
+          );
+          setProducts(updatedProducts);
+          await logActivity(`Updated product: ${result.data.name}`, { productId: result.data.id });
+        }
+      } else {
+        const updatedProducts = products.map(p =>
+          p.id === product.id ? product : p
+        );
+        setProducts(updatedProducts);
+        await AsyncStorage.setItem('products', JSON.stringify(updatedProducts));
+        await logActivity(`Updated product: ${product.name}`, { productId: product.id });
+      }
     } catch (error) {
       console.error('Error updating product:', error);
     }
@@ -399,10 +555,20 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const deleteProduct = async (productId: string) => {
     try {
       const productName = products.find(p => p.id === productId)?.name;
-      const updatedProducts = products.filter(p => p.id !== productId);
-      setProducts(updatedProducts);
-      await AsyncStorage.setItem('products', JSON.stringify(updatedProducts));
-      await logActivity(`Deleted product: ${productName}`, { productId });
+      
+      if (APP_CONFIG.features.useBackend) {
+        const result = await supabaseService.deleteProduct(productId);
+        if (result.success) {
+          const updatedProducts = products.filter(p => p.id !== productId);
+          setProducts(updatedProducts);
+          await logActivity(`Deleted product: ${productName}`, { productId });
+        }
+      } else {
+        const updatedProducts = products.filter(p => p.id !== productId);
+        setProducts(updatedProducts);
+        await AsyncStorage.setItem('products', JSON.stringify(updatedProducts));
+        await logActivity(`Deleted product: ${productName}`, { productId });
+      }
     } catch (error) {
       console.error('Error deleting product:', error);
     }
@@ -410,16 +576,25 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   const addUser = async (userData: Omit<User, 'id' | 'createdAt'>) => {
     try {
-      const newUser: User = {
-        ...userData,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString(),
-      };
+      if (APP_CONFIG.features.useBackend) {
+        const result = await supabaseService.createUser(userData);
+        if (result.success && result.data) {
+          const updatedUsers = [...users, result.data];
+          setUsers(updatedUsers);
+          await logActivity(`Added new user: ${result.data.username}`, { userId: result.data.id, role: result.data.role });
+        }
+      } else {
+        const newUser: User = {
+          ...userData,
+          id: Date.now().toString(),
+          createdAt: new Date().toISOString(),
+        };
 
-      const updatedUsers = [...users, newUser];
-      setUsers(updatedUsers);
-      await AsyncStorage.setItem('users', JSON.stringify(updatedUsers));
-      await logActivity(`Added new user: ${newUser.username}`, { userId: newUser.id, role: newUser.role });
+        const updatedUsers = [...users, newUser];
+        setUsers(updatedUsers);
+        await AsyncStorage.setItem('users', JSON.stringify(updatedUsers));
+        await logActivity(`Added new user: ${newUser.username}`, { userId: newUser.id, role: newUser.role });
+      }
     } catch (error) {
       console.error('Error adding user:', error);
     }
@@ -427,12 +602,23 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   const updateUser = async (userData: User) => {
     try {
-      const updatedUsers = users.map(u =>
-        u.id === userData.id ? userData : u
-      );
-      setUsers(updatedUsers);
-      await AsyncStorage.setItem('users', JSON.stringify(updatedUsers));
-      await logActivity(`Updated user: ${userData.username}`, { userId: userData.id });
+      if (APP_CONFIG.features.useBackend) {
+        const result = await supabaseService.updateUser(userData.id, userData);
+        if (result.success && result.data) {
+          const updatedUsers = users.map(u =>
+            u.id === userData.id ? result.data : u
+          );
+          setUsers(updatedUsers);
+          await logActivity(`Updated user: ${result.data.username}`, { userId: result.data.id });
+        }
+      } else {
+        const updatedUsers = users.map(u =>
+          u.id === userData.id ? userData : u
+        );
+        setUsers(updatedUsers);
+        await AsyncStorage.setItem('users', JSON.stringify(updatedUsers));
+        await logActivity(`Updated user: ${userData.username}`, { userId: userData.id });
+      }
     } catch (error) {
       console.error('Error updating user:', error);
     }
@@ -441,10 +627,20 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
   const deleteUser = async (userId: string) => {
     try {
       const userName = users.find(u => u.id === userId)?.username;
-      const updatedUsers = users.filter(u => u.id !== userId);
-      setUsers(updatedUsers);
-      await AsyncStorage.setItem('users', JSON.stringify(updatedUsers));
-      await logActivity(`Deleted user: ${userName}`, { userId });
+      
+      if (APP_CONFIG.features.useBackend) {
+        const result = await supabaseService.deleteUser(userId);
+        if (result.success) {
+          const updatedUsers = users.filter(u => u.id !== userId);
+          setUsers(updatedUsers);
+          await logActivity(`Deleted user: ${userName}`, { userId });
+        }
+      } else {
+        const updatedUsers = users.filter(u => u.id !== userId);
+        setUsers(updatedUsers);
+        await AsyncStorage.setItem('users', JSON.stringify(updatedUsers));
+        await logActivity(`Deleted user: ${userName}`, { userId });
+      }
     } catch (error) {
       console.error('Error deleting user:', error);
     }
@@ -452,11 +648,21 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   const markNotificationAsRead = async (notificationId: string) => {
     try {
-      const updatedNotifications = notifications.map(n =>
-        n.id === notificationId ? { ...n, read: true } : n
-      );
-      setNotifications(updatedNotifications);
-      await AsyncStorage.setItem('notifications', JSON.stringify(updatedNotifications));
+      if (APP_CONFIG.features.useBackend) {
+        const result = await supabaseService.markNotificationAsRead(notificationId);
+        if (result.success) {
+          const updatedNotifications = notifications.map(n =>
+            n.id === notificationId ? { ...n, read: true } : n
+          );
+          setNotifications(updatedNotifications);
+        }
+      } else {
+        const updatedNotifications = notifications.map(n =>
+          n.id === notificationId ? { ...n, read: true } : n
+        );
+        setNotifications(updatedNotifications);
+        await AsyncStorage.setItem('notifications', JSON.stringify(updatedNotifications));
+      }
     } catch (error) {
       console.error('Error marking notification as read:', error);
     }
@@ -464,9 +670,17 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
   const markAllNotificationsAsRead = async () => {
     try {
-      const updatedNotifications = notifications.map(n => ({ ...n, read: true }));
-      setNotifications(updatedNotifications);
-      await AsyncStorage.setItem('notifications', JSON.stringify(updatedNotifications));
+      if (APP_CONFIG.features.useBackend) {
+        const result = await supabaseService.markAllNotificationsAsRead();
+        if (result.success) {
+          const updatedNotifications = notifications.map(n => ({ ...n, read: true }));
+          setNotifications(updatedNotifications);
+        }
+      } else {
+        const updatedNotifications = notifications.map(n => ({ ...n, read: true }));
+        setNotifications(updatedNotifications);
+        await AsyncStorage.setItem('notifications', JSON.stringify(updatedNotifications));
+      }
     } catch (error) {
       console.error('Error marking all notifications as read:', error);
     }
@@ -517,7 +731,9 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       transactions,
       users,
       notifications,
+      activityLogs,
       unreadCount,
+      isLoading,
       updateProductStock,
       addTransaction,
       addProduct,

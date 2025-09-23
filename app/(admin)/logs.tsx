@@ -41,7 +41,7 @@ const getActivityColor = (type: string) => {
 };
 
 export default function ActivityLogs() {
-  const { activityLogs } = useData();
+  const { activityLogs, isLoading } = useData();
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -56,7 +56,15 @@ export default function ActivityLogs() {
       </View>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {activityLogs.length === 0 ? (
+        {isLoading ? (
+          <View style={styles.emptyState}>
+            <Clock size={48} color="#D2B48C" />
+            <Text style={styles.emptyTitle}>Loading...</Text>
+            <Text style={styles.emptySubtitle}>
+              Fetching activity logs...
+            </Text>
+          </View>
+        ) : activityLogs.length === 0 ? (
           <View style={styles.emptyState}>
             <Clock size={48} color="#D2B48C" />
             <Text style={styles.emptyTitle}>No Activity Yet</Text>
@@ -79,10 +87,10 @@ export default function ActivityLogs() {
                 </View>
                 <View style={styles.logContent}>
                   <Text style={styles.logAction}>{log.action}</Text>
-                  <Text style={styles.logUser}>by {log.userId} ({log.userRole})</Text>
+                  <Text style={styles.logUser}>by {log.user_id || log.userId} ({log.user_role || log.userRole})</Text>
                 </View>
                 <Text style={styles.logTime}>
-                  {formatDate(log.timestamp)}
+                  {formatDate(log.timestamp || log.created_at)}
                 </Text>
               </View>
               {log.details && (

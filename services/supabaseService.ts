@@ -1,16 +1,17 @@
 import { supabase } from '@/lib/supabase';
 import { Database } from '@/types/database';
 
-type User = Database['public']['Tables']['users']['Row'];
-type Product = Database['public']['Tables']['products']['Row'];
-type Transaction = Database['public']['Tables']['transactions']['Row'];
-type ActivityLog = Database['public']['Tables']['activity_logs']['Row'];
-type Notification = Database['public']['Tables']['notifications']['Row'];
+type DbUser = Database['public']['Tables']['users']['Row'];
+type DbProduct = Database['public']['Tables']['products']['Row'];
+type DbTransaction = Database['public']['Tables']['transactions']['Row'];
+type DbActivityLog = Database['public']['Tables']['activity_logs']['Row'];
+type DbNotification = Database['public']['Tables']['notifications']['Row'];
 
 export class SupabaseService {
   // Authentication
   async login(username: string, password: string) {
     try {
+      console.log('Attempting login for:', username);
       const { data, error } = await supabase
         .from('users')
         .select('*')
@@ -18,9 +19,15 @@ export class SupabaseService {
         .eq('password', password)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Login error:', error);
+        throw error;
+      }
+      
+      console.log('Login successful for:', username);
       return { success: true, data };
     } catch (error) {
+      console.error('Login failed:', error);
       return { success: false, error: (error as Error).message };
     }
   }
@@ -28,14 +35,21 @@ export class SupabaseService {
   // Users
   async getUsers() {
     try {
+      console.log('Fetching users...');
       const { data, error } = await supabase
         .from('users')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching users:', error);
+        throw error;
+      }
+      
+      console.log('Users fetched:', data?.length || 0);
       return { success: true, data };
     } catch (error) {
+      console.error('Failed to get users:', error);
       return { success: false, error: (error as Error).message };
     }
   }
@@ -88,14 +102,21 @@ export class SupabaseService {
   // Products
   async getProducts() {
     try {
+      console.log('Fetching products...');
       const { data, error } = await supabase
         .from('products')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching products:', error);
+        throw error;
+      }
+      
+      console.log('Products fetched:', data?.length || 0);
       return { success: true, data };
     } catch (error) {
+      console.error('Failed to get products:', error);
       return { success: false, error: (error as Error).message };
     }
   }
@@ -148,14 +169,21 @@ export class SupabaseService {
   // Transactions
   async getTransactions() {
     try {
+      console.log('Fetching transactions...');
       const { data, error } = await supabase
         .from('transactions')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching transactions:', error);
+        throw error;
+      }
+      
+      console.log('Transactions fetched:', data?.length || 0);
       return { success: true, data };
     } catch (error) {
+      console.error('Failed to get transactions:', error);
       return { success: false, error: (error as Error).message };
     }
   }
@@ -178,15 +206,22 @@ export class SupabaseService {
   // Activity Logs
   async getActivityLogs() {
     try {
+      console.log('Fetching activity logs...');
       const { data, error } = await supabase
         .from('activity_logs')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(100);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching activity logs:', error);
+        throw error;
+      }
+      
+      console.log('Activity logs fetched:', data?.length || 0);
       return { success: true, data };
     } catch (error) {
+      console.error('Failed to get activity logs:', error);
       return { success: false, error: (error as Error).message };
     }
   }
@@ -209,14 +244,21 @@ export class SupabaseService {
   // Notifications
   async getNotifications() {
     try {
+      console.log('Fetching notifications...');
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching notifications:', error);
+        throw error;
+      }
+      
+      console.log('Notifications fetched:', data?.length || 0);
       return { success: true, data };
     } catch (error) {
+      console.error('Failed to get notifications:', error);
       return { success: false, error: (error as Error).message };
     }
   }
