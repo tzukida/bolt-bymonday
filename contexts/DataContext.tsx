@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '@/lib/supabase';
-import { APP_CONFIG } from '@/config';
+import { APP_CONFIG } from '@/config/app';
 
 export type Product = {
   id: string;
