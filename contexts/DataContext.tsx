@@ -1,68 +1,75 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { supabase } from '@/lib/supabase';
-import { APP_CONFIG } from '@/config/app';
-
-export interface Product {
-  id: string;
-  name: string;
-  price: number;
-  stock: number;
-  created_at?: string;
-}
+// context/DataContext.tsx
+import React, { createContext, useContext, useEffect, useState } from "react";
+import { supabaseService } from "@/services/SupabaseService";
 
 type DataContextType = {
-  products: Product[];
-  fetchProducts: () => Promise<void>;
-  addProduct: (product: Omit<Product, 'id'>) => Promise<void>;
-  deleteProduct: (id: string) => Promise<void>;
-  getTodaysSales: () => number;
-  getLowStockProducts: () => Product[];
+  products: any[];
+  users: any[];
+  transactions: any[];
+  lowStock: any[];
+  todaysSales: any[];
+  refreshData: () => Promise<void>;
+  createTransaction: (t: {
+    product_id: string;
+    quantity: number;
+    total_price: number;
+    user_id: string;
+  }) => Promise<{ success: boolean; data?: any; error?: string }>;
 };
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
 
 export const DataProvider = ({ children }: { children: React.ReactNode }) => {
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [lowStock, setLowStock] = useState<any[]>([]);
+  const [todaysSales, setTodaysSales] = useState<any[]>([]);
 
-const fetchProducts = async () => {
-  console.log("Fetching products...");
-  const { data, error } = await supabase.from('products').select('*');
-  if (error) {
-    console.error("Supabase fetch error:", error.message);
-  } else {
-    console.log("Supabase data:", data);
-    setProducts(data as Product[]);
-  }
-};
+  const refreshData = async () => {
+    console.log("🔄 Refreshing all data from Supabase...");
+    const [p, u, t, l, ts] = await Promise.all([
+      supabaseService.getProducts(),
+      supabaseService.getUsers(),
+      supabaseService.getTodaysSales(),
+      supabaseService.getLowStockProducts(),
+      supabaseService.getTodaysSales(),
+    ]);
 
-
-  const addProduct = async (product: Omit<Product, 'id'>) => { /* same as before */ };
-  const deleteProduct = async (id: string) => { /* same as before */ };
-
-  // --- Extra helpers ---
-  const getTodaysSales = () => {
-    const today = new Date().toISOString().split('T')[0];
-    return products
-      .filter((p) => p.created_at?.startsWith(today))
-      .reduce((sum, p) => sum + p.price, 0);
+    setProducts(p);
+    setUsers(u);
+    setTransactions(t);
+    setLowStock(l);
+    setTodaysSales(ts);
   };
 
-  const getLowStockProducts = () => products.filter((p) => p.stock < 10);
+  const createTransaction = async (transaction: {
+    product_id: string;
+    quantity: number;
+    total_price: number;
+    user_id: string;
+  }) => {
+    const result = await supabaseService.createTransaction(transaction);
+    if (result.success) {
+      await refreshData(); // ✅ refresh after insert
+    }
+    return result;
+  };
 
   useEffect(() => {
-    fetchProducts();
+    refreshData();
   }, []);
 
   return (
     <DataContext.Provider
       value={{
         products,
-        fetchProducts,
-        addProduct,
-        deleteProduct,
-        getTodaysSales,
-        getLowStockProducts,
+        users,
+        transactions,
+        lowStock,
+        todaysSales,
+        refreshData,
+        createTransaction,
       }}
     >
       {children}
@@ -72,8 +79,6 @@ const fetchProducts = async () => {
 
 export const useData = () => {
   const context = useContext(DataContext);
-  if (!context) {
-    throw new Error('useData must be used within a DataProvider');
-  }
+  if (!context) throw new Error("useData must be used within DataProvider");
   return context;
 };
