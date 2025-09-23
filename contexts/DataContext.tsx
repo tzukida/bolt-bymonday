@@ -1,6 +1,6 @@
 // contexts/DataContext.tsx
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { supabaseService } from "@/services/supabaseServices";
+import { supabaseService } from "@/services/supabaseService";
 
 
 export interface Product {
