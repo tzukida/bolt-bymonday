@@ -1,61 +1,278 @@
-// app/(admin)/index.tsx
-import React, { useEffect } from "react";
-import { View, Text, ScrollView, TouchableOpacity } from "react-native";
-import { useRouter } from "expo-router";
-import { useData } from "@/contexts/DataContext";
+import React from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+} from 'react-native';
+import { useRouter } from 'expo-router';
+import { useAuth } from '@/contexts/AuthContext';
+import { useData } from '@/contexts/DataContext';
+import { LogOut, Package, TriangleAlert as AlertTriangle, DollarSign, Coffee } from 'lucide-react-native';
 
-export default function AdminIndex() {
+export default function DashboardScreen() {
+  const { user, logout } = useAuth();
+  const { products, getTodaysSales, getLowStockProducts } = useData();
   const router = useRouter();
-  const { products, users, transactions, todaysSales, low, refreshData } = useData();
 
-  useEffect(() => {
-    refreshData();
-  }, []);
+  const isAdmin = user?.role === 'admin';
+  const todaysSales = getTodaysSales();
+  const lowStockProducts = getLowStockProducts();
+  const totalProducts = products.length;
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Logout', onPress: logout },
+      ]
+    );
+  };
+
+  const DashboardCard = ({ title, value, subtitle, icon: Icon, color, onPress }: any) => (
+    <TouchableOpacity style={[styles.card, { borderLeftColor: color }]} onPress={onPress}>
+      <View style={styles.cardContent}>
+        <View style={styles.cardHeader}>
+          <Icon size={24} color={color} />
+          <Text style={styles.cardTitle}>{title}</Text>
+        </View>
+        <Text style={[styles.cardValue, { color }]}>{value}</Text>
+        {subtitle && <Text style={styles.cardSubtitle}>{subtitle}</Text>}
+      </View>
+    </TouchableOpacity>
+  );
 
   return (
-    <ScrollView className="flex-1 bg-white p-4">
-      <Text className="text-2xl font-bold mb-4">📊 Admin Dashboard</Text>
-
-      {/* Sales Today */}
-      <View className="mb-4 p-4 bg-green-100 rounded-2xl shadow">
-        <Text className="text-lg font-semibold">Today's Sales</Text>
-        <Text className="text-2xl font-bold text-green-700">₱{todaysSales}</Text>
+    <ScrollView style={styles.container}>
+      <View style={styles.header}>
+        <View>
+          <Text style={styles.greeting}>Welcome back,</Text>
+          <Text style={styles.username}>{user?.username}</Text>
+          <Text style={styles.role}>{user?.role === 'admin' ? 'Administrator' : 'Staff Member'}</Text>
+        </View>
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <LogOut size={20} color="white" />
+        </TouchableOpacity>
       </View>
 
-      {/* Stats Grid */}
-      <View className="grid grid-cols-2 gap-4">
-        <TouchableOpacity
-          className="p-4 bg-blue-100 rounded-2xl shadow"
-          onPress={() => router.push("/(admin)/products")}
-        >
-          <Text className="text-lg font-semibold">Products</Text>
-          <Text className="text-xl font-bold text-blue-700">{products.length}</Text>
-        </TouchableOpacity>
+      <View style={styles.content}>
+        <Text style={styles.sectionTitle}>Overview</Text>
+        
+        <View style={styles.cardsContainer}>
+          <DashboardCard
+            title="Today's Sales"
+            value={`₱${todaysSales.toFixed(2)}`}
+            subtitle="Total revenue today"
+            icon={DollarSign}
+            color="#228B22"
+            onPress={() => router.push('/(tabs)/reports')}
+          />
 
-        <TouchableOpacity
-          className="p-4 bg-purple-100 rounded-2xl shadow"
-          onPress={() => router.push("/(admin)/users")}
-        >
-          <Text className="text-lg font-semibold">Users</Text>
-          <Text className="text-xl font-bold text-purple-700">{users.length}</Text>
-        </TouchableOpacity>
+          <DashboardCard
+            title="Low Stock Alerts"
+            value={lowStockProducts.length}
+            subtitle={lowStockProducts.length > 0 ? 'Items need restocking' : 'All items well stocked'}
+            icon={AlertTriangle}
+            color={lowStockProducts.length > 0 ? '#FF6347' : '#228B22'}
+            onPress={() => router.push('/(tabs)/inventory')}
+          />
 
-        <TouchableOpacity
-          className="p-4 bg-yellow-100 rounded-2xl shadow"
-          onPress={() => router.push("/(admin)/transactions")}
-        >
-          <Text className="text-lg font-semibold">Transactions</Text>
-          <Text className="text-xl font-bold text-yellow-700">{transactions.length}</Text>
-        </TouchableOpacity>
+          {isAdmin && (
+            <DashboardCard
+              title="Total Products"
+              value={totalProducts}
+              subtitle="Items in inventory"
+              icon={Package}
+              color="#4169E1"
+              onPress={() => router.push('/(tabs)/inventory')}
+            />
+          )}
 
-        <TouchableOpacity
-          className="p-4 bg-red-100 rounded-2xl shadow"
-          onPress={() => router.push("/(admin)/low-stock")}
-        >
-          <Text className="text-lg font-semibold">Low Stock</Text>
-          <Text className="text-xl font-bold text-red-700">{low}</Text>
-        </TouchableOpacity>
+          <DashboardCard
+            title="Point of Sale"
+            value="Ready"
+            subtitle="Process new orders"
+            icon={Coffee}
+            color="#8B4513"
+            onPress={() => router.push('/(tabs)/pos')}
+          />
+        </View>
+
+        {lowStockProducts.length > 0 && (
+          <View style={styles.alertsSection}>
+            <Text style={styles.sectionTitle}>Low Stock Alerts</Text>
+            {lowStockProducts.slice(0, 3).map(product => (
+              <View key={product.id} style={styles.alertCard}>
+                <AlertTriangle size={20} color="#FF6347" />
+                <View style={styles.alertContent}>
+                  <Text style={styles.alertTitle}>{product.name}</Text>
+                  <Text style={styles.alertSubtitle}>Only {product.stock} left</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {isAdmin && (
+          <View style={styles.quickActions}>
+            <Text style={styles.sectionTitle}>Quick Actions</Text>
+            <View style={styles.actionsGrid}>
+              <TouchableOpacity 
+                style={styles.actionButton}
+                onPress={() => router.push('/(tabs)/inventory')}
+              >
+                <Package size={24} color="#8B4513" />
+                <Text style={styles.actionText}>Manage Inventory</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.actionButton}
+                onPress={() => router.push('/(tabs)/reports')}
+              >
+                <DollarSign size={24} color="#8B4513" />
+                <Text style={styles.actionText}>View Reports</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
       </View>
     </ScrollView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F5F5DC',
+  },
+  header: {
+    backgroundColor: '#8B4513',
+    padding: 24,
+    paddingTop: 60,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  greeting: {
+    color: '#F5F5DC',
+    fontSize: 16,
+  },
+  username: {
+    color: 'white',
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginTop: 4,
+  },
+  role: {
+    color: '#DEB887',
+    fontSize: 14,
+    marginTop: 2,
+  },
+  logoutButton: {
+    backgroundColor: '#A0522D',
+    padding: 12,
+    borderRadius: 8,
+  },
+  content: {
+    padding: 16,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#8B4513',
+    marginBottom: 16,
+    marginTop: 8,
+  },
+  cardsContainer: {
+    gap: 12,
+  },
+  card: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 16,
+    borderLeftWidth: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  cardContent: {
+    gap: 8,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  cardTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#666',
+  },
+  cardValue: {
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  cardSubtitle: {
+    fontSize: 12,
+    color: '#888',
+  },
+  alertsSection: {
+    marginTop: 24,
+  },
+  alertCard: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: '#FF6347',
+  },
+  alertContent: {
+    flex: 1,
+  },
+  alertTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  alertSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 2,
+  },
+  quickActions: {
+    marginTop: 24,
+  },
+  actionsGrid: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  actionButton: {
+    flex: 1,
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 20,
+    alignItems: 'center',
+    gap: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  actionText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#8B4513',
+    textAlign: 'center',
+  },
+});
