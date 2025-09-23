@@ -1,82 +1,61 @@
 // app/(admin)/index.tsx
-import React from "react";
-import { View, Text, FlatList, StyleSheet } from "react-native";
-import { useData } from "../../contexts/DataContext";
+import React, { useEffect } from "react";
+import { View, Text, ScrollView, TouchableOpacity } from "react-native";
+import { useRouter } from "expo-router";
+import { useData } from "@/contexts/DataContext";
 
-export default function DashboardScreen() {
-  const { products, getTodaysSales, getLowStockProducts } = useData();
+export default function AdminIndex() {
+  const router = useRouter();
+  const { products, users, transactions, todaysSales, low, refreshData } = useData();
 
-  const todaysSales = getTodaysSales();
-  const lowStock = getLowStockProducts();
+  useEffect(() => {
+    refreshData();
+  }, []);
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>📊 Dashboard</Text>
+    <ScrollView className="flex-1 bg-white p-4">
+      <Text className="text-2xl font-bold mb-4">📊 Admin Dashboard</Text>
 
-      <View style={styles.card}>
-        <Text style={styles.label}>Today's Sales</Text>
-        <Text style={styles.value}>₱{todaysSales.toFixed(2)}</Text>
+      {/* Sales Today */}
+      <View className="mb-4 p-4 bg-green-100 rounded-2xl shadow">
+        <Text className="text-lg font-semibold">Today's Sales</Text>
+        <Text className="text-2xl font-bold text-green-700">₱{todaysSales}</Text>
       </View>
 
-      <View style={styles.card}>
-        <Text style={styles.label}>Low Stock Items</Text>
-        {lowStock.length > 0 ? (
-          <FlatList
-            data={lowStock}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <Text style={styles.item}>
-                {item.name} — {item.stock} left
-              </Text>
-            )}
-          />
-        ) : (
-          <Text style={styles.item}>✅ All items have enough stock</Text>
-        )}
-      </View>
+      {/* Stats Grid */}
+      <View className="grid grid-cols-2 gap-4">
+        <TouchableOpacity
+          className="p-4 bg-blue-100 rounded-2xl shadow"
+          onPress={() => router.push("/(admin)/products")}
+        >
+          <Text className="text-lg font-semibold">Products</Text>
+          <Text className="text-xl font-bold text-blue-700">{products.length}</Text>
+        </TouchableOpacity>
 
-      <View style={styles.card}>
-        <Text style={styles.label}>Total Products</Text>
-        <Text style={styles.value}>{products.length}</Text>
+        <TouchableOpacity
+          className="p-4 bg-purple-100 rounded-2xl shadow"
+          onPress={() => router.push("/(admin)/users")}
+        >
+          <Text className="text-lg font-semibold">Users</Text>
+          <Text className="text-xl font-bold text-purple-700">{users.length}</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          className="p-4 bg-yellow-100 rounded-2xl shadow"
+          onPress={() => router.push("/(admin)/transactions")}
+        >
+          <Text className="text-lg font-semibold">Transactions</Text>
+          <Text className="text-xl font-bold text-yellow-700">{transactions.length}</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          className="p-4 bg-red-100 rounded-2xl shadow"
+          onPress={() => router.push("/(admin)/low-stock")}
+        >
+          <Text className="text-lg font-semibold">Low Stock</Text>
+          <Text className="text-xl font-bold text-red-700">{low}</Text>
+        </TouchableOpacity>
       </View>
-    </View>
+    </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 20,
-    backgroundColor: "#f9f9f9",
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: "bold",
-    marginBottom: 20,
-  },
-  card: {
-    backgroundColor: "#fff",
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 15,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 8,
-  },
-  value: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#007AFF",
-  },
-  item: {
-    fontSize: 14,
-    paddingVertical: 3,
-  },
-});
