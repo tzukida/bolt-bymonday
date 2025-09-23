@@ -1,7 +1,5 @@
-// contexts/DataContext.tsx
-import React, { createContext, useContext, useState, useEffect } from "react";
-import { supabaseService } from "@/services/supabaseService";
-
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
 
 export interface Product {
   id: string;
@@ -14,7 +12,7 @@ export interface Product {
 type DataContextType = {
   products: Product[];
   fetchProducts: () => Promise<void>;
-  addProduct: (product: Omit<Product, "id">) => Promise<void>;
+  addProduct: (product: Omit<Product, 'id'>) => Promise<void>;
   deleteProduct: (id: string) => Promise<void>;
   getTodaysSales: () => number;
   getLowStockProducts: () => Product[];
@@ -25,46 +23,43 @@ const DataContext = createContext<DataContextType | undefined>(undefined);
 export const DataProvider = ({ children }: { children: React.ReactNode }) => {
   const [products, setProducts] = useState<Product[]>([]);
 
-  // --- Fetch all products ---
   const fetchProducts = async () => {
-    console.log("DataContext.fetchProducts: fetching...");
-    const result = await supabaseService.getProducts();
-
-    if (result.success && result.data) {
-      console.log("Products fetched:", result.data.length);
-      setProducts(result.data as Product[]);
+    console.log("Fetching products...");
+    const { data, error } = await supabase.from('products').select('*');
+    if (error) {
+      console.error("Supabase fetch error:", error.message);
     } else {
-      console.error("Failed to fetch products:", result.error);
+      console.log("Supabase data:", data);
+      setProducts(data as Product[]);
     }
   };
 
-  // --- Add product ---
-  const addProduct = async (product: Omit<Product, "id">) => {
-    console.log("DataContext.addProduct:", product);
-    const result = await supabaseService.createProduct(product);
+  const addProduct = async (product: Omit<Product, 'id'>) => {
+    const { data, error } = await supabase
+      .from('products')
+      .insert(product)
+      .select()
+      .single();
 
-    if (result.success && result.data) {
-      setProducts((prev) => [result.data as Product, ...prev]);
-    } else {
-      console.error("Failed to add product:", result.error);
+    if (error) {
+      console.error("Error adding product:", error.message);
+    } else if (data) {
+      setProducts((prev) => [data as Product, ...prev]);
     }
   };
 
-  // --- Delete product ---
   const deleteProduct = async (id: string) => {
-    console.log("DataContext.deleteProduct:", id);
-    const result = await supabaseService.deleteProduct(id);
-
-    if (result.success) {
-      setProducts((prev) => prev.filter((p) => p.id !== id));
+    const { error } = await supabase.from('products').delete().eq('id', id);
+    if (error) {
+      console.error("Error deleting product:", error.message);
     } else {
-      console.error("Failed to delete product:", result.error);
+      setProducts((prev) => prev.filter((p) => p.id !== id));
     }
   };
 
   // --- Extra helpers ---
   const getTodaysSales = () => {
-    const today = new Date().toISOString().split("T")[0];
+    const today = new Date().toISOString().split('T')[0];
     return products
       .filter((p) => p.created_at?.startsWith(today))
       .reduce((sum, p) => sum + p.price, 0);
@@ -72,7 +67,6 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
 
   const getLowStockProducts = () => products.filter((p) => p.stock < 10);
 
-  // Load products on mount
   useEffect(() => {
     fetchProducts();
   }, []);
@@ -96,7 +90,7 @@ export const DataProvider = ({ children }: { children: React.ReactNode }) => {
 export const useData = () => {
   const context = useContext(DataContext);
   if (!context) {
-    throw new Error("useData must be used within a DataProvider");
+    throw new Error('useData must be used within a DataProvider');
   }
   return context;
 };
