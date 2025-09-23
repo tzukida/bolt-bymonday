@@ -1,18 +1,20 @@
 // contexts/DataContext.tsx
-import React, { createContext, useContext, useEffect, useState, ReactNode } from "react";
-import { SupabaseService } from "../services/supabaseService";
+import { supabaseServices } from "@/services/supabaseServices";
 
-interface DataContextType {
-  products: number;
-  low: number;
-  users: number;
-  transactions: number;
-  todaysSales: number;
-  unreadCount: number;
-  refreshData: () => Promise<void>;
-}
+const refreshData = async () => {
+  console.log("DataContext.refreshData: fetching all data...");
+  const [products, low, users, transactions, todaysSales] = await Promise.all([
+    supabaseServices.getProducts(),
+    supabaseServices.getLowStock(),
+    supabaseServices.getUsers(),
+    supabaseServices.getTransactions(),
+    supabaseServices.getTodaysSales(),
+  ]);
 
-const DataContext = createContext<DataContextType | undefined>(undefined);
+  setState({ products, low, users, transactions, todaysSales });
+  console.log("DataContext.refreshData: done", { products, low, users, transactions, todaysSales });
+};
+
 
 export const DataProvider = ({ children }: { children: ReactNode }) => {
   const [products, setProducts] = useState(0);
