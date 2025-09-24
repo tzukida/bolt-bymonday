@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Clock, User, ShoppingCart, Package, Mail, Settings } from 'lucide-react-native';
 import { useData } from '@/contexts/DataContext';
 
@@ -49,7 +48,7 @@ export default function ActivityLogs() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Activity Logs</Text>
         <Text style={styles.subtitle}>System activity and user actions</Text>
@@ -87,10 +86,12 @@ export default function ActivityLogs() {
                 </View>
                 <View style={styles.logContent}>
                   <Text style={styles.logAction}>{log.action}</Text>
-                  <Text style={styles.logUser}>by {log.user_id || log.userId} ({log.user_role || log.userRole})</Text>
+                  <Text style={styles.logUser}>
+                    by {log.user_id || log.userId} ({log.user_role || log.userRole})
+                  </Text>
                 </View>
                 <Text style={styles.logTime}>
-                  {formatDate(log.timestamp || log.created_at)}
+                  {formatDate(log.timestamp || log.created_at || new Date().toISOString())}
                 </Text>
               </View>
               {log.details && (
@@ -102,7 +103,7 @@ export default function ActivityLogs() {
           ))
         )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -110,6 +111,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F5F5DC',
+    paddingTop: 60,
   },
   header: {
     padding: 20,
