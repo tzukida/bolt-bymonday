@@ -2,6 +2,7 @@ import { supabase } from '@/lib/supabase';
 import { Database } from '@/types/database';
 
 type DbUser = Database['public']['Tables']['users']['Row'];
+type DbProduct = Database['public']['Tables']['products']['Row'];
 type DbTransaction = Database['public']['Tables']['transactions']['Row'];
 type DbActivityLog = Database['public']['Tables']['activity_logs']['Row'];
 type DbNotification = Database['public']['Tables']['notifications']['Row'];
@@ -18,7 +19,10 @@ export class SupabaseService {
         .eq('password', password)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Login error:', error);
+        throw error;
+      }
       console.log('Login successful for:', username);
       return { success: true, data };
     } catch (error) {
@@ -30,12 +34,14 @@ export class SupabaseService {
   // Users
   async getUsers() {
     try {
+      console.log('Fetching users...');
       const { data, error } = await supabase
         .from('users')
         .select('*')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
+      console.log('Users fetched:', data?.length || 0);
       return { success: true, data };
     } catch (error) {
       return { success: false, error: (error as Error).message };
@@ -49,7 +55,6 @@ export class SupabaseService {
         .insert(userData)
         .select()
         .single();
-
       if (error) throw error;
       return { success: true, data };
     } catch (error) {
@@ -65,7 +70,6 @@ export class SupabaseService {
         .eq('id', id)
         .select()
         .single();
-
       if (error) throw error;
       return { success: true, data };
     } catch (error) {
@@ -83,15 +87,73 @@ export class SupabaseService {
     }
   }
 
+  // Products
+  async getProducts() {
+    try {
+      console.log('Fetching products...');
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      console.log('Products fetched:', data?.length || 0);
+      return { success: true, data };
+    } catch (error) {
+      return { success: false, error: (error as Error).message };
+    }
+  }
+
+  async createProduct(productData: Database['public']['Tables']['products']['Insert']) {
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .insert(productData)
+        .select()
+        .single();
+      if (error) throw error;
+      return { success: true, data };
+    } catch (error) {
+      return { success: false, error: (error as Error).message };
+    }
+  }
+
+  async updateProduct(id: string, productData: Database['public']['Tables']['products']['Update']) {
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .update(productData)
+        .eq('id', id)
+        .select()
+        .single();
+      if (error) throw error;
+      return { success: true, data };
+    } catch (error) {
+      return { success: false, error: (error as Error).message };
+    }
+  }
+
+  async deleteProduct(id: string) {
+    try {
+      const { error } = await supabase.from('products').delete().eq('id', id);
+      if (error) throw error;
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: (error as Error).message };
+    }
+  }
+
   // Transactions
   async getTransactions() {
     try {
+      console.log('Fetching transactions...');
       const { data, error } = await supabase
         .from('transactions')
         .select('*')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
+      console.log('Transactions fetched:', data?.length || 0);
       return { success: true, data };
     } catch (error) {
       return { success: false, error: (error as Error).message };
@@ -105,7 +167,6 @@ export class SupabaseService {
         .insert(transactionData)
         .select()
         .single();
-
       if (error) throw error;
       return { success: true, data };
     } catch (error) {
@@ -116,6 +177,7 @@ export class SupabaseService {
   // Activity Logs
   async getActivityLogs() {
     try {
+      console.log('Fetching activity logs...');
       const { data, error } = await supabase
         .from('activity_logs')
         .select('*')
@@ -123,6 +185,7 @@ export class SupabaseService {
         .limit(100);
 
       if (error) throw error;
+      console.log('Activity logs fetched:', data?.length || 0);
       return { success: true, data };
     } catch (error) {
       return { success: false, error: (error as Error).message };
@@ -136,7 +199,6 @@ export class SupabaseService {
         .insert(logData)
         .select()
         .single();
-
       if (error) throw error;
       return { success: true, data };
     } catch (error) {
@@ -147,12 +209,14 @@ export class SupabaseService {
   // Notifications
   async getNotifications() {
     try {
+      console.log('Fetching notifications...');
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
+      console.log('Notifications fetched:', data?.length || 0);
       return { success: true, data };
     } catch (error) {
       return { success: false, error: (error as Error).message };
@@ -166,7 +230,6 @@ export class SupabaseService {
         .insert(notificationData)
         .select()
         .single();
-
       if (error) throw error;
       return { success: true, data };
     } catch (error) {
@@ -182,7 +245,6 @@ export class SupabaseService {
         .eq('id', id)
         .select()
         .single();
-
       if (error) throw error;
       return { success: true, data };
     } catch (error) {
@@ -197,7 +259,6 @@ export class SupabaseService {
         .update({ read: true })
         .eq('read', false)
         .select();
-
       if (error) throw error;
       return { success: true, data };
     } catch (error) {
