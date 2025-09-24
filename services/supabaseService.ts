@@ -1,96 +1,209 @@
-// services/supabaseServices.ts
-import { supabase } from "../lib/supabase";
+import { supabase } from '@/lib/supabase';
+import { Database } from '@/types/database';
 
-export const supabaseServices = {
-  // ✅ Count products
-  async getProducts(): Promise<number> {
-    console.log("supabaseServices.getProducts()");
-    const { count, error } = await supabase
-      .from("products")
-      .select("*", { count: "exact", head: true });
+type DbUser = Database['public']['Tables']['users']['Row'];
+type DbTransaction = Database['public']['Tables']['transactions']['Row'];
+type DbActivityLog = Database['public']['Tables']['activity_logs']['Row'];
+type DbNotification = Database['public']['Tables']['notifications']['Row'];
 
-    if (error) {
-      console.error("Error fetching products:", error);
-      return 0;
+export class SupabaseService {
+  // Authentication
+  async login(username: string, password: string) {
+    try {
+      console.log('Attempting login for:', username);
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('username', username)
+        .eq('password', password)
+        .single();
+
+      if (error) throw error;
+      console.log('Login successful for:', username);
+      return { success: true, data };
+    } catch (error) {
+      console.error('Login failed:', error);
+      return { success: false, error: (error as Error).message };
     }
-    return count ?? 0;
-  },
+  }
 
-  // ✅ Count low stock (qty < 10)
-  async getLowStock(): Promise<number> {
-    console.log("supabaseServices.getLowStock()");
-    const { count, error } = await supabase
-      .from("products")
-      .select("*", { count: "exact", head: true })
-      .lt("quantity", 10);
+  // Users
+  async getUsers() {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error("Error fetching low stock:", error);
-      return 0;
+      if (error) throw error;
+      return { success: true, data };
+    } catch (error) {
+      return { success: false, error: (error as Error).message };
     }
-    return count ?? 0;
-  },
+  }
 
-  // ✅ Count users
-  async getUsers(): Promise<number> {
-    console.log("supabaseServices.getUsers()");
-    const { count, error } = await supabase
-      .from("users")
-      .select("*", { count: "exact", head: true });
+  async createUser(userData: Database['public']['Tables']['users']['Insert']) {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .insert(userData)
+        .select()
+        .single();
 
-    if (error) {
-      console.error("Error fetching users:", error);
-      return 0;
+      if (error) throw error;
+      return { success: true, data };
+    } catch (error) {
+      return { success: false, error: (error as Error).message };
     }
-    return count ?? 0;
-  },
+  }
 
-  // ✅ Count transactions
-  async getTransactions(): Promise<number> {
-    console.log("supabaseServices.getTransactions()");
-    const { count, error } = await supabase
-      .from("transactions")
-      .select("*", { count: "exact", head: true });
+  async updateUser(id: string, userData: Database['public']['Tables']['users']['Update']) {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .update(userData)
+        .eq('id', id)
+        .select()
+        .single();
 
-    if (error) {
-      console.error("Error fetching transactions:", error);
-      return 0;
+      if (error) throw error;
+      return { success: true, data };
+    } catch (error) {
+      return { success: false, error: (error as Error).message };
     }
-    return count ?? 0;
-  },
+  }
 
-  // ✅ Get today's sales total
-  async getTodaysSales(): Promise<number> {
-    console.log("supabaseServices.getTodaysSales()");
-    const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
-
-    const { data, error } = await supabase
-      .from("transactions")
-      .select("amount, created_at")
-      .gte("created_at", `${today}T00:00:00`)
-      .lte("created_at", `${today}T23:59:59`);
-
-    if (error) {
-      console.error("Error fetching today's sales:", error);
-      return 0;
+  async deleteUser(id: string) {
+    try {
+      const { error } = await supabase.from('users').delete().eq('id', id);
+      if (error) throw error;
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: (error as Error).message };
     }
+  }
 
-    const total = data?.reduce((sum, t) => sum + (t.amount ?? 0), 0) ?? 0;
-    return total;
-  },
+  // Transactions
+  async getTransactions() {
+    try {
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-  // ✅ Example unread count (notifications table)
-  async getUnreadCount(): Promise<number> {
-    console.log("supabaseServices.getUnreadCount()");
-    const { count, error } = await supabase
-      .from("notifications")
-      .select("*", { count: "exact", head: true })
-      .eq("read", false);
-
-    if (error) {
-      console.error("Error fetching unread notifications:", error);
-      return 0;
+      if (error) throw error;
+      return { success: true, data };
+    } catch (error) {
+      return { success: false, error: (error as Error).message };
     }
-    return count ?? 0;
-  },
-};
+  }
+
+  async createTransaction(transactionData: Database['public']['Tables']['transactions']['Insert']) {
+    try {
+      const { data, error } = await supabase
+        .from('transactions')
+        .insert(transactionData)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return { success: true, data };
+    } catch (error) {
+      return { success: false, error: (error as Error).message };
+    }
+  }
+
+  // Activity Logs
+  async getActivityLogs() {
+    try {
+      const { data, error } = await supabase
+        .from('activity_logs')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      if (error) throw error;
+      return { success: true, data };
+    } catch (error) {
+      return { success: false, error: (error as Error).message };
+    }
+  }
+
+  async createActivityLog(logData: Database['public']['Tables']['activity_logs']['Insert']) {
+    try {
+      const { data, error } = await supabase
+        .from('activity_logs')
+        .insert(logData)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return { success: true, data };
+    } catch (error) {
+      return { success: false, error: (error as Error).message };
+    }
+  }
+
+  // Notifications
+  async getNotifications() {
+    try {
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return { success: true, data };
+    } catch (error) {
+      return { success: false, error: (error as Error).message };
+    }
+  }
+
+  async createNotification(notificationData: Database['public']['Tables']['notifications']['Insert']) {
+    try {
+      const { data, error } = await supabase
+        .from('notifications')
+        .insert(notificationData)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return { success: true, data };
+    } catch (error) {
+      return { success: false, error: (error as Error).message };
+    }
+  }
+
+  async markNotificationAsRead(id: string) {
+    try {
+      const { data, error } = await supabase
+        .from('notifications')
+        .update({ read: true })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return { success: true, data };
+    } catch (error) {
+      return { success: false, error: (error as Error).message };
+    }
+  }
+
+  async markAllNotificationsAsRead() {
+    try {
+      const { data, error } = await supabase
+        .from('notifications')
+        .update({ read: true })
+        .eq('read', false)
+        .select();
+
+      if (error) throw error;
+      return { success: true, data };
+    } catch (error) {
+      return { success: false, error: (error as Error).message };
+    }
+  }
+}
+
+export const supabaseService = new SupabaseService();
