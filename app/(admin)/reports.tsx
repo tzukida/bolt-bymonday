@@ -15,7 +15,7 @@ import { Calendar, Download, TrendingUp, DollarSign, ShoppingBag } from 'lucide-
 const { width } = Dimensions.get('window');
 
 export default function ReportsScreen() {
-  const { transactions, products, isLoading } = useData();
+  const { transactions, products } = useData();
   const [selectedPeriod, setSelectedPeriod] = useState<'daily' | 'weekly' | 'monthly'>('daily');
 
   const generateSalesData = () => {
@@ -50,7 +50,7 @@ export default function ReportsScreen() {
 
     // Populate with transaction data
     transactions.forEach(transaction => {
-      const transactionDate = new Date(transaction.timestamp || transaction.created_at || new Date());
+      const transactionDate = new Date(transaction.timestamp);
       let key: string;
       
       if (selectedPeriod === 'daily') {
@@ -239,18 +239,14 @@ export default function ReportsScreen() {
         {/* Recent Transactions */}
         <View style={styles.transactionsContainer}>
           <Text style={styles.sectionTitle}>Recent Transactions</Text>
-          {isLoading ? (
-            <Text style={styles.noDataText}>Loading transactions...</Text>
-          ) : transactions.slice(0, 5).map(transaction => (
+          {transactions.slice(0, 5).map(transaction => (
             <View key={transaction.id} style={styles.transactionCard}>
               <View style={styles.transactionInfo}>
                 <Text style={styles.transactionId}>#{transaction.id.slice(-6)}</Text>
                 <Text style={styles.transactionDate}>
-                  {new Date(transaction.timestamp || transaction.created_at || new Date()).toLocaleDateString()}
+                  {new Date(transaction.timestamp).toLocaleDateString()}
                 </Text>
-                <Text style={styles.transactionMethod}>
-                  {transaction.paymentMethod || transaction.payment_method || 'Cash'}
-                </Text>
+                <Text style={styles.transactionMethod}>{transaction.paymentMethod}</Text>
               </View>
               <Text style={styles.transactionAmount}>₱{transaction.total.toFixed(2)}</Text>
             </View>

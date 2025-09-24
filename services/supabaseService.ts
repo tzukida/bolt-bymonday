@@ -23,6 +23,7 @@ export class SupabaseService {
         console.error('Login error:', error);
         throw error;
       }
+      
       console.log('Login successful for:', username);
       return { success: true, data };
     } catch (error) {
@@ -40,10 +41,15 @@ export class SupabaseService {
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching users:', error);
+        throw error;
+      }
+      
       console.log('Users fetched:', data?.length || 0);
       return { success: true, data };
     } catch (error) {
+      console.error('Failed to get users:', error);
       return { success: false, error: (error as Error).message };
     }
   }
@@ -55,6 +61,7 @@ export class SupabaseService {
         .insert(userData)
         .select()
         .single();
+
       if (error) throw error;
       return { success: true, data };
     } catch (error) {
@@ -70,6 +77,7 @@ export class SupabaseService {
         .eq('id', id)
         .select()
         .single();
+
       if (error) throw error;
       return { success: true, data };
     } catch (error) {
@@ -79,7 +87,11 @@ export class SupabaseService {
 
   async deleteUser(id: string) {
     try {
-      const { error } = await supabase.from('users').delete().eq('id', id);
+      const { error } = await supabase
+        .from('users')
+        .delete()
+        .eq('id', id);
+
       if (error) throw error;
       return { success: true };
     } catch (error) {
@@ -96,10 +108,15 @@ export class SupabaseService {
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching products:', error);
+        throw error;
+      }
+      
       console.log('Products fetched:', data?.length || 0);
       return { success: true, data };
     } catch (error) {
+      console.error('Failed to get products:', error);
       return { success: false, error: (error as Error).message };
     }
   }
@@ -111,6 +128,7 @@ export class SupabaseService {
         .insert(productData)
         .select()
         .single();
+
       if (error) throw error;
       return { success: true, data };
     } catch (error) {
@@ -126,6 +144,7 @@ export class SupabaseService {
         .eq('id', id)
         .select()
         .single();
+
       if (error) throw error;
       return { success: true, data };
     } catch (error) {
@@ -135,7 +154,11 @@ export class SupabaseService {
 
   async deleteProduct(id: string) {
     try {
-      const { error } = await supabase.from('products').delete().eq('id', id);
+      const { error } = await supabase
+        .from('products')
+        .delete()
+        .eq('id', id);
+
       if (error) throw error;
       return { success: true };
     } catch (error) {
@@ -152,10 +175,15 @@ export class SupabaseService {
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching transactions:', error);
+        throw error;
+      }
+      
       console.log('Transactions fetched:', data?.length || 0);
       return { success: true, data };
     } catch (error) {
+      console.error('Failed to get transactions:', error);
       return { success: false, error: (error as Error).message };
     }
   }
@@ -167,6 +195,7 @@ export class SupabaseService {
         .insert(transactionData)
         .select()
         .single();
+
       if (error) throw error;
       return { success: true, data };
     } catch (error) {
@@ -184,10 +213,15 @@ export class SupabaseService {
         .order('created_at', { ascending: false })
         .limit(100);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching activity logs:', error);
+        throw error;
+      }
+      
       console.log('Activity logs fetched:', data?.length || 0);
       return { success: true, data };
     } catch (error) {
+      console.error('Failed to get activity logs:', error);
       return { success: false, error: (error as Error).message };
     }
   }
@@ -199,6 +233,7 @@ export class SupabaseService {
         .insert(logData)
         .select()
         .single();
+
       if (error) throw error;
       return { success: true, data };
     } catch (error) {
@@ -215,10 +250,15 @@ export class SupabaseService {
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching notifications:', error);
+        throw error;
+      }
+      
       console.log('Notifications fetched:', data?.length || 0);
       return { success: true, data };
     } catch (error) {
+      console.error('Failed to get notifications:', error);
       return { success: false, error: (error as Error).message };
     }
   }
@@ -230,6 +270,7 @@ export class SupabaseService {
         .insert(notificationData)
         .select()
         .single();
+
       if (error) throw error;
       return { success: true, data };
     } catch (error) {
@@ -245,6 +286,7 @@ export class SupabaseService {
         .eq('id', id)
         .select()
         .single();
+
       if (error) throw error;
       return { success: true, data };
     } catch (error) {
@@ -259,6 +301,7 @@ export class SupabaseService {
         .update({ read: true })
         .eq('read', false)
         .select();
+
       if (error) throw error;
       return { success: true, data };
     } catch (error) {

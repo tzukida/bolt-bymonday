@@ -26,13 +26,7 @@ export default function DashboardScreen() {
       'Are you sure you want to logout?',
       [
         { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Logout',
-          onPress: async () => {
-            await logout();
-            router.replace('/login'); // ✅ redirect to login after logout
-          }
-        },
+        { text: 'Logout', onPress: logout },
       ]
     );
   };

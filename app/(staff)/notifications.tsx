@@ -11,7 +11,7 @@ import { useData } from '@/contexts/DataContext';
 import { Bell, BellOff, Package, ShoppingCart, User, Settings, CircleCheck as CheckCircle } from 'lucide-react-native';
 
 export default function NotificationsScreen() {
-  const { notifications, markNotificationAsRead, markAllNotificationsAsRead, unreadCount, isLoading } = useData();
+  const { notifications, markNotificationAsRead, markAllNotificationsAsRead, unreadCount } = useData();
   const [isRefreshing, setIsRefreshing] = React.useState(false);
 
   const onRefresh = async () => {
@@ -92,15 +92,7 @@ export default function NotificationsScreen() {
           <RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />
         }
       >
-        {isLoading ? (
-          <View style={styles.emptyState}>
-            <Bell size={48} color="#DEB887" />
-            <Text style={styles.emptyTitle}>Loading...</Text>
-            <Text style={styles.emptySubtitle}>
-              Fetching notifications...
-            </Text>
-          </View>
-        ) : notifications.length === 0 ? (
+        {notifications.length === 0 ? (
           <View style={styles.emptyState}>
             <BellOff size={48} color="#DEB887" />
             <Text style={styles.emptyTitle}>No Notifications</Text>
@@ -144,7 +136,7 @@ export default function NotificationsScreen() {
                       </Text>
                       
                       <Text style={styles.notificationTime}>
-                        {formatTimestamp(notification.timestamp || notification.created_at || new Date().toISOString())}
+                        {formatTimestamp(notification.timestamp)}
                       </Text>
                     </View>
                   </View>
