@@ -1,4 +1,4 @@
-// services/supabaseService.ts
+
 import { supabase } from "@/lib/supabase";
 import { Product, User, Transaction, ActivityLog, Notification } from "@/contexts/DataContext";
 
