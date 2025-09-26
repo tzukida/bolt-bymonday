@@ -1,313 +1,69 @@
-import { supabase } from '@/lib/supabase';
-import { Database } from '@/types/database';
+// services/supabaseService.ts
+import { supabase } from "@/lib/supabase";
+import { Product, User, Transaction, ActivityLog, Notification } from "@/context/DataContext";
 
-type DbUser = Database['public']['Tables']['users']['Row'];
-type DbProduct = Database['public']['Tables']['products']['Row'];
-type DbTransaction = Database['public']['Tables']['transactions']['Row'];
-type DbActivityLog = Database['public']['Tables']['activity_logs']['Row'];
-type DbNotification = Database['public']['Tables']['notifications']['Row'];
+export const supabaseService = {
+  // ---------- PRODUCTS ----------
+  getProducts: async () => {
+    const { data, error } = await supabase.from("products").select("*");
+    return error ? { success: false, error } : { success: true, data };
+  },
+  createProduct: async (product: Omit<Product, "id">) => {
+    const { error } = await supabase.from("products").insert(product);
+    return { success: !error, error };
+  },
+  updateProduct: async (id: string, product: Partial<Product>) => {
+    const { error } = await supabase.from("products").update(product).eq("id", id);
+    return { success: !error, error };
+  },
+  deleteProduct: async (id: string) => {
+    const { error } = await supabase.from("products").delete().eq("id", id);
+    return { success: !error, error };
+  },
 
-export class SupabaseService {
-  // Authentication
-  async login(username: string, password: string) {
-    try {
-      console.log('Attempting login for:', username);
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('username', username)
-        .eq('password', password)
-        .single();
+  // ---------- USERS ----------
+  getUsers: async () => {
+    const { data, error } = await supabase.from("users").select("*");
+    return error ? { success: false, error } : { success: true, data };
+  },
+  createUser: async (user: Omit<User, "id">) => {
+    const { error } = await supabase.from("users").insert(user);
+    return { success: !error, error };
+  },
+  deleteUser: async (id: string) => {
+    const { error } = await supabase.from("users").delete().eq("id", id);
+    return { success: !error, error };
+  },
 
-      if (error) {
-        console.error('Login error:', error);
-        throw error;
-      }
-      
-      console.log('Login successful for:', username);
-      return { success: true, data };
-    } catch (error) {
-      console.error('Login failed:', error);
-      return { success: false, error: (error as Error).message };
-    }
-  }
+  // ---------- TRANSACTIONS ----------
+  getTransactions: async () => {
+    const { data, error } = await supabase.from("transactions").select("*");
+    return error ? { success: false, error } : { success: true, data };
+  },
+  createTransaction: async (transaction: Omit<Transaction, "id">) => {
+    const { error } = await supabase.from("transactions").insert(transaction);
+    return { success: !error, error };
+  },
 
-  // Users
-  async getUsers() {
-    try {
-      console.log('Fetching users...');
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .order('created_at', { ascending: false });
+  // ---------- ACTIVITY LOGS ----------
+  getActivityLogs: async () => {
+    const { data, error } = await supabase.from("activity_logs").select("*");
+    return error ? { success: false, error } : { success: true, data };
+  },
+  createActivityLog: async (message: string) => {
+    const log: ActivityLog = { id: Date.now().toString(), message, created_at: new Date().toISOString() };
+    const { error } = await supabase.from("activity_logs").insert(log);
+    return { success: !error, error };
+  },
 
-      if (error) {
-        console.error('Error fetching users:', error);
-        throw error;
-      }
-      
-      console.log('Users fetched:', data?.length || 0);
-      return { success: true, data };
-    } catch (error) {
-      console.error('Failed to get users:', error);
-      return { success: false, error: (error as Error).message };
-    }
-  }
-
-  async createUser(userData: Database['public']['Tables']['users']['Insert']) {
-    try {
-      const { data, error } = await supabase
-        .from('users')
-        .insert(userData)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return { success: true, data };
-    } catch (error) {
-      return { success: false, error: (error as Error).message };
-    }
-  }
-
-  async updateUser(id: string, userData: Database['public']['Tables']['users']['Update']) {
-    try {
-      const { data, error } = await supabase
-        .from('users')
-        .update(userData)
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return { success: true, data };
-    } catch (error) {
-      return { success: false, error: (error as Error).message };
-    }
-  }
-
-  async deleteUser(id: string) {
-    try {
-      const { error } = await supabase
-        .from('users')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-      return { success: true };
-    } catch (error) {
-      return { success: false, error: (error as Error).message };
-    }
-  }
-
-  // Products
-  async getProducts() {
-    try {
-      console.log('Fetching products...');
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching products:', error);
-        throw error;
-      }
-      
-      console.log('Products fetched:', data?.length || 0);
-      return { success: true, data };
-    } catch (error) {
-      console.error('Failed to get products:', error);
-      return { success: false, error: (error as Error).message };
-    }
-  }
-
-  async createProduct(productData: Database['public']['Tables']['products']['Insert']) {
-    try {
-      const { data, error } = await supabase
-        .from('products')
-        .insert(productData)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return { success: true, data };
-    } catch (error) {
-      return { success: false, error: (error as Error).message };
-    }
-  }
-
-  async updateProduct(id: string, productData: Database['public']['Tables']['products']['Update']) {
-    try {
-      const { data, error } = await supabase
-        .from('products')
-        .update(productData)
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return { success: true, data };
-    } catch (error) {
-      return { success: false, error: (error as Error).message };
-    }
-  }
-
-  async deleteProduct(id: string) {
-    try {
-      const { error } = await supabase
-        .from('products')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
-      return { success: true };
-    } catch (error) {
-      return { success: false, error: (error as Error).message };
-    }
-  }
-
-  // Transactions
-  async getTransactions() {
-    try {
-      console.log('Fetching transactions...');
-      const { data, error } = await supabase
-        .from('transactions')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching transactions:', error);
-        throw error;
-      }
-      
-      console.log('Transactions fetched:', data?.length || 0);
-      return { success: true, data };
-    } catch (error) {
-      console.error('Failed to get transactions:', error);
-      return { success: false, error: (error as Error).message };
-    }
-  }
-
-  async createTransaction(transactionData: Database['public']['Tables']['transactions']['Insert']) {
-    try {
-      const { data, error } = await supabase
-        .from('transactions')
-        .insert(transactionData)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return { success: true, data };
-    } catch (error) {
-      return { success: false, error: (error as Error).message };
-    }
-  }
-
-  // Activity Logs
-  async getActivityLogs() {
-    try {
-      console.log('Fetching activity logs...');
-      const { data, error } = await supabase
-        .from('activity_logs')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(100);
-
-      if (error) {
-        console.error('Error fetching activity logs:', error);
-        throw error;
-      }
-      
-      console.log('Activity logs fetched:', data?.length || 0);
-      return { success: true, data };
-    } catch (error) {
-      console.error('Failed to get activity logs:', error);
-      return { success: false, error: (error as Error).message };
-    }
-  }
-
-  async createActivityLog(logData: Database['public']['Tables']['activity_logs']['Insert']) {
-    try {
-      const { data, error } = await supabase
-        .from('activity_logs')
-        .insert(logData)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return { success: true, data };
-    } catch (error) {
-      return { success: false, error: (error as Error).message };
-    }
-  }
-
-  // Notifications
-  async getNotifications() {
-    try {
-      console.log('Fetching notifications...');
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching notifications:', error);
-        throw error;
-      }
-      
-      console.log('Notifications fetched:', data?.length || 0);
-      return { success: true, data };
-    } catch (error) {
-      console.error('Failed to get notifications:', error);
-      return { success: false, error: (error as Error).message };
-    }
-  }
-
-  async createNotification(notificationData: Database['public']['Tables']['notifications']['Insert']) {
-    try {
-      const { data, error } = await supabase
-        .from('notifications')
-        .insert(notificationData)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return { success: true, data };
-    } catch (error) {
-      return { success: false, error: (error as Error).message };
-    }
-  }
-
-  async markNotificationAsRead(id: string) {
-    try {
-      const { data, error } = await supabase
-        .from('notifications')
-        .update({ read: true })
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (error) throw error;
-      return { success: true, data };
-    } catch (error) {
-      return { success: false, error: (error as Error).message };
-    }
-  }
-
-  async markAllNotificationsAsRead() {
-    try {
-      const { data, error } = await supabase
-        .from('notifications')
-        .update({ read: true })
-        .eq('read', false)
-        .select();
-
-      if (error) throw error;
-      return { success: true, data };
-    } catch (error) {
-      return { success: false, error: (error as Error).message };
-    }
-  }
-}
-
-export const supabaseService = new SupabaseService();
+  // ---------- NOTIFICATIONS ----------
+  getNotifications: async () => {
+    const { data, error } = await supabase.from("notifications").select("*");
+    return error ? { success: false, error } : { success: true, data };
+  },
+  createNotification: async (message: string) => {
+    const notif: Notification = { id: Date.now().toString(), message, created_at: new Date().toISOString() };
+    const { error } = await supabase.from("notifications").insert(notif);
+    return { success: !error, error };
+  },
+};
