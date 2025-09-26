@@ -1,6 +1,6 @@
 
 import { supabase } from "@/lib/supabase";
-import { Product, User, Transaction, ActivityLog, Notification } from "@/contexts/DataContext";
+import type { Product, User, Transaction, ActivityLog, Notification } from "@/contexts/DataContext";
 
 export const supabaseService = {
   // --- PRODUCTS ---
@@ -32,6 +32,10 @@ export const supabaseService = {
     const { error } = await supabase.from("users").insert(user);
     return { success: !error, error };
   },
+  async updateUser(id: string, user: Partial<User>) {
+    const { error } = await supabase.from("users").update(user).eq("id", id);
+    return { success: !error, error };
+  },
   async deleteUser(id: string) {
     const { error } = await supabase.from("users").delete().eq("id", id);
     return { success: !error, error };
@@ -50,13 +54,26 @@ export const supabaseService = {
 
   // --- ACTIVITY LOGS ---
   async getActivityLogs() {
-    const { data, error } = await supabase.from("activityLogs").select("*");
+    const { data, error } = await supabase.from("activity_logs").select("*");
     if (error) return { success: false, error };
     return { success: true, data };
   },
   async createActivityLog(log: ActivityLog) {
-    const { error } = await supabase.from("activityLogs").insert(log);
+    const { error } = await supabase.from("activity_logs").insert(log);
     return { success: !error, error };
+  },
+  
+  // --- LOGIN ---
+  async login(username: string, password: string) {
+    const { data, error } = await supabase
+      .from("users")
+      .select("*")
+      .eq("username", username)
+      .eq("password", password)
+      .single();
+    
+    if (error) return { success: false, error };
+    return { success: true, data };
   },
 
   // --- NOTIFICATIONS ---

@@ -87,10 +87,10 @@ export default function ActivityLogs() {
                 </View>
                 <View style={styles.logContent}>
                   <Text style={styles.logAction}>{log.action}</Text>
-                  <Text style={styles.logUser}>by {log.user_id || log.userId} ({log.user_role || log.userRole})</Text>
+                  <Text style={styles.logUser}>by {log.user_id} ({log.user_role})</Text>
                 </View>
                 <Text style={styles.logTime}>
-                  {formatDate(log.timestamp || log.created_at)}
+                  {formatDate(log.created_at)}
                 </Text>
               </View>
               {log.details && (

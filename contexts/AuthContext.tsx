@@ -3,13 +3,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabaseService } from '@/services/supabaseService';
 import { supabase } from '@/lib/supabase';
 import { APP_CONFIG } from '@/config/app';
-
-export interface User {
-  username: string;
-  role: 'admin' | 'staff';
-  id?: string;
-  email?: string;
-}
+import type { User } from '@/contexts/DataContext';
+import type { Json } from '@/types/database';
 
 interface AuthContextType {
   user: User | null;
@@ -106,9 +101,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             user_id: foundUser.username,
             user_role: foundUser.role,
             type: 'login',
+            details: null,
           });
         } else {
-          await logActivity(`User ${username} logged in`, foundUser.role);
+          await logActivity(`User ${username} logged in`, foundUser.role, 'login');
         }
         
         return true;
@@ -128,11 +124,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           user_id: user.username,
           user_role: user.role,
           type: 'logout',
+          details: null,
         });
         // Sign out from Supabase Auth
         await supabase.auth.signOut();
       } else {
-        await logActivity(`User ${user.username} logged out`, user.role);
+        await logActivity(`User ${user.username} logged out`, user.role, 'logout');
       }
     }
     if (mounted.current) {
@@ -141,7 +138,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await AsyncStorage.removeItem('user');
   };
 
-  const logActivity = async (action: string, role: string) => {
+  const logActivity = async (action: string, role: string, type: string = 'system', details?: Json | null) => {
     try {
       const existingLogs = await AsyncStorage.getItem('activityLogs');
       const logs = existingLogs ? JSON.parse(existingLogs) : [];
@@ -150,9 +147,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         id: Date.now().toString(),
         action,
         user_id: user?.username || 'unknown',
-        userRole: role,
-        type: 'system',
-        timestamp: new Date().toISOString(),
+        user_role: role,
+        type,
+        details,
+        created_at: new Date().toISOString(),
       };
       
       logs.unshift(newLog);
