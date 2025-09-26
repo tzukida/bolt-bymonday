@@ -1,69 +1,80 @@
 // services/supabaseService.ts
 import { supabase } from "@/lib/supabase";
-import { Product, User, Transaction, ActivityLog, Notification } from "@/context/DataContext";
+import { Product, User, Transaction, ActivityLog, Notification } from "@/contexts/DataContext";
 
 export const supabaseService = {
-  // ---------- PRODUCTS ----------
-  getProducts: async () => {
+  // --- PRODUCTS ---
+  async getProducts() {
     const { data, error } = await supabase.from("products").select("*");
-    return error ? { success: false, error } : { success: true, data };
+    if (error) return { success: false, error };
+    return { success: true, data };
   },
-  createProduct: async (product: Omit<Product, "id">) => {
+  async createProduct(product: Product) {
     const { error } = await supabase.from("products").insert(product);
     return { success: !error, error };
   },
-  updateProduct: async (id: string, product: Partial<Product>) => {
+  async updateProduct(id: string, product: Partial<Product>) {
     const { error } = await supabase.from("products").update(product).eq("id", id);
     return { success: !error, error };
   },
-  deleteProduct: async (id: string) => {
+  async deleteProduct(id: string) {
     const { error } = await supabase.from("products").delete().eq("id", id);
     return { success: !error, error };
   },
 
-  // ---------- USERS ----------
-  getUsers: async () => {
+  // --- USERS ---
+  async getUsers() {
     const { data, error } = await supabase.from("users").select("*");
-    return error ? { success: false, error } : { success: true, data };
+    if (error) return { success: false, error };
+    return { success: true, data };
   },
-  createUser: async (user: Omit<User, "id">) => {
+  async createUser(user: User) {
     const { error } = await supabase.from("users").insert(user);
     return { success: !error, error };
   },
-  deleteUser: async (id: string) => {
+  async deleteUser(id: string) {
     const { error } = await supabase.from("users").delete().eq("id", id);
     return { success: !error, error };
   },
 
-  // ---------- TRANSACTIONS ----------
-  getTransactions: async () => {
+  // --- TRANSACTIONS ---
+  async getTransactions() {
     const { data, error } = await supabase.from("transactions").select("*");
-    return error ? { success: false, error } : { success: true, data };
+    if (error) return { success: false, error };
+    return { success: true, data };
   },
-  createTransaction: async (transaction: Omit<Transaction, "id">) => {
+  async createTransaction(transaction: Transaction) {
     const { error } = await supabase.from("transactions").insert(transaction);
     return { success: !error, error };
   },
 
-  // ---------- ACTIVITY LOGS ----------
-  getActivityLogs: async () => {
-    const { data, error } = await supabase.from("activity_logs").select("*");
-    return error ? { success: false, error } : { success: true, data };
+  // --- ACTIVITY LOGS ---
+  async getActivityLogs() {
+    const { data, error } = await supabase.from("activityLogs").select("*");
+    if (error) return { success: false, error };
+    return { success: true, data };
   },
-  createActivityLog: async (message: string) => {
-    const log: ActivityLog = { id: Date.now().toString(), message, created_at: new Date().toISOString() };
-    const { error } = await supabase.from("activity_logs").insert(log);
+  async createActivityLog(log: ActivityLog) {
+    const { error } = await supabase.from("activityLogs").insert(log);
     return { success: !error, error };
   },
 
-  // ---------- NOTIFICATIONS ----------
-  getNotifications: async () => {
+  // --- NOTIFICATIONS ---
+  async getNotifications() {
     const { data, error } = await supabase.from("notifications").select("*");
-    return error ? { success: false, error } : { success: true, data };
+    if (error) return { success: false, error };
+    return { success: true, data };
   },
-  createNotification: async (message: string) => {
-    const notif: Notification = { id: Date.now().toString(), message, created_at: new Date().toISOString() };
-    const { error } = await supabase.from("notifications").insert(notif);
+  async createNotification(notification: Notification) {
+    const { error } = await supabase.from("notifications").insert(notification);
+    return { success: !error, error };
+  },
+  async markNotificationAsRead(id: string) {
+    const { error } = await supabase.from("notifications").update({ read: true }).eq("id", id);
+    return { success: !error, error };
+  },
+  async markAllNotificationsAsRead() {
+    const { error } = await supabase.from("notifications").update({ read: true }).eq("read", false);
     return { success: !error, error };
   },
 };
