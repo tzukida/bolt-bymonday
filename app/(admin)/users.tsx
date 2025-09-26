@@ -290,7 +290,7 @@ export default function UsersScreen() {
               <View style={styles.userDetail}>
                 <Calendar size={14} color="#666" />
                 <Text style={styles.userDetailText}>
-                  Created: {formatDate(user.created_at)}
+                  Created: {formatDate(user.createdAt)}
                 </Text>
               </View>
             </View>
