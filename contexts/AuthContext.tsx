@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabaseService } from '@/services/supabaseService';
 import { supabase } from '@/lib/supabase';
@@ -23,21 +23,28 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const mounted = useRef(true);
 
   useEffect(() => {
+    mounted.current = true;
     loadUser();
+    return () => {
+      mounted.current = false;
+    };
   }, []);
 
   const loadUser = async () => {
     try {
       const userData = await AsyncStorage.getItem('user');
-      if (userData) {
+      if (userData && mounted.current) {
         setUser(JSON.parse(userData));
       }
     } catch (error) {
       console.error('Error loading user:', error);
     } finally {
-      setIsLoading(false);
+      if (mounted.current) {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -87,7 +94,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           id: foundUser.id,
           email: foundUser.email 
         };
-        setUser(userData);
+        if (mounted.current) {
+          setUser(userData);
+        }
         await AsyncStorage.setItem('user', JSON.stringify(userData));
         
         // Log the login activity
@@ -126,7 +135,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await logActivity(`User ${user.username} logged out`, user.role);
       }
     }
-    setUser(null);
+    if (mounted.current) {
+      setUser(null);
+    }
     await AsyncStorage.removeItem('user');
   };
 
