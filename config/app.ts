@@ -16,7 +16,7 @@ export const APP_CONFIG = {
 
   // Feature Flags
   features: {
-    useBackend: process.env.EXPO_PUBLIC_USE_BACKEND === 'true' || true, // Enable by default
+    useBackend: process.env.EXPO_PUBLIC_USE_BACKEND === 'true',
     enableNotifications: true,
     enableActivityLogs: true,
     enableUserManagement: true,
