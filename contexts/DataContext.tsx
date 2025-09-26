@@ -1,8 +1,8 @@
-// context/DataContext.tsx
-import React, { createContext, useContext, useEffect, useState } from "react";
+// contexts/DataContext.tsx
+import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { APP_CONFIG } from "@/config/app";
 import { supabaseService } from "@/services/supabaseService";
+import { APP_CONFIG } from "@/config/app";
 
 // Types
 export interface Product {
@@ -11,228 +11,274 @@ export interface Product {
   price: number;
   stock: number;
   image?: string;
+  category?: string;
   created_at?: string;
 }
+
 export interface User {
   id: string;
   username: string;
-  password: string;
   role: "admin" | "staff";
+  email?: string;
   created_at?: string;
 }
+
 export interface Transaction {
   id: string;
-  productId: string;
+  product_id: string;
   quantity: number;
-  type: "in" | "out";
-  created_at: string;
+  total: number;
+  created_at?: string;
 }
+
 export interface ActivityLog {
   id: string;
-  message: string;
-  created_at: string;
+  action: string;
+  user_id: string;
+  created_at?: string;
 }
+
 export interface Notification {
   id: string;
   message: string;
-  created_at: string;
+  read: boolean;
+  created_at?: string;
 }
 
-// Sample Data
-const SAMPLE_PRODUCTS: Product[] = [
-  {
-    id: "1",
-    name: "Latte",
-    price: 120,
-    stock: 15,
-    image: "https://images.pexels.com/photos/302896/pexels-photo-302896.jpeg",
-  },
-  {
-    id: "2",
-    name: "Espresso",
-    price: 80,
-    stock: 25,
-    image: "https://images.pexels.com/photos/34085/pexels-photo.jpg",
-  },
-];
-const SAMPLE_USERS: User[] = [
-  { id: "1", username: "admin", password: "admin123", role: "admin" },
-  { id: "2", username: "staff", password: "staff123", role: "staff" },
-];
-
-// Context type
 interface DataContextType {
   products: Product[];
   users: User[];
   transactions: Transaction[];
-  activityLogs: ActivityLog[];
+  logs: ActivityLog[];
   notifications: Notification[];
-  loading: boolean;
-
-  addProduct: (p: Omit<Product, "id">) => Promise<void>;
-  updateProduct: (id: string, p: Partial<Product>) => Promise<void>;
+  unreadCount: number;
+  addProduct: (product: Product) => Promise<void>;
+  updateProduct: (id: string, product: Partial<Product>) => Promise<void>;
   deleteProduct: (id: string) => Promise<void>;
-  addUser: (u: Omit<User, "id">) => Promise<void>;
+  addUser: (user: User) => Promise<void>;
   deleteUser: (id: string) => Promise<void>;
-  addTransaction: (t: Omit<Transaction, "id">) => Promise<void>;
-  addActivityLog: (msg: string) => Promise<void>;
-  addNotification: (msg: string) => Promise<void>;
-  refreshData: () => Promise<void>;
+  addTransaction: (transaction: Transaction) => Promise<void>;
+  addLog: (log: ActivityLog) => Promise<void>;
+  addNotification: (notification: Notification) => Promise<void>;
+  markNotificationRead: (id: string) => Promise<void>;
+  markAllNotificationsRead: () => Promise<void>;
+  getTodaysSales: () => number;
 }
 
-// Create Context
 const DataContext = createContext<DataContextType | undefined>(undefined);
-export const useData = () => {
-  const ctx = useContext(DataContext);
-  if (!ctx) throw new Error("useData must be inside DataProvider");
-  return ctx;
-};
 
-// Provider
-export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+// --- SAMPLE DATA ---
+const SAMPLE_PRODUCTS: Product[] = [
+  {
+    id: "1",
+    name: "Espresso",
+    price: 120,
+    stock: 20,
+    image: "https://images.pexels.com/photos/302901/pexels-photo-302901.jpeg",
+    category: "Coffee",
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: "2",
+    name: "Cappuccino",
+    price: 150,
+    stock: 15,
+    image: "https://images.pexels.com/photos/2396220/pexels-photo-2396220.jpeg",
+    category: "Coffee",
+    created_at: new Date().toISOString(),
+  },
+];
+
+const SAMPLE_USERS: User[] = [
+  {
+    id: "1",
+    username: "admin",
+    role: "admin",
+    email: "admin@example.com",
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: "2",
+    username: "staff",
+    role: "staff",
+    email: "staff@example.com",
+    created_at: new Date().toISOString(),
+  },
+];
+
+const SAMPLE_TRANSACTIONS: Transaction[] = [
+  {
+    id: "1",
+    product_id: "1",
+    quantity: 2,
+    total: 240,
+    created_at: new Date().toISOString(),
+  },
+];
+
+const SAMPLE_LOGS: ActivityLog[] = [
+  {
+    id: "1",
+    action: "User admin logged in",
+    user_id: "1",
+    created_at: new Date().toISOString(),
+  },
+];
+
+const SAMPLE_NOTIFICATIONS: Notification[] = [
+  {
+    id: "1",
+    message: "Low stock alert for Espresso",
+    read: false,
+    created_at: new Date().toISOString(),
+  },
+];
+
+// --- PROVIDER ---
+export const DataProvider = ({ children }: { children: ReactNode }) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
+  const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  const useBackend = APP_CONFIG.features.useBackend;
+  // --- INITIAL LOAD ---
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        if (APP_CONFIG.features.useBackend) {
+          console.log("Fetching from Supabase...");
+          const [pRes, uRes, tRes, lRes, nRes] = await Promise.all([
+            supabaseService.getProducts(),
+            supabaseService.getUsers(),
+            supabaseService.getTransactions(),
+            supabaseService.getActivityLogs(),
+            supabaseService.getNotifications(),
+          ]);
 
-  // ---------- LOAD DATA ----------
-  const refreshData = async () => {
-    setLoading(true);
-    try {
-      if (useBackend) {
-        const [prodRes, userRes, transRes, logRes, notifRes] = await Promise.all([
-          supabaseService.getProducts(),
-          supabaseService.getUsers(),
-          supabaseService.getTransactions(),
-          supabaseService.getActivityLogs(),
-          supabaseService.getNotifications(),
-        ]);
-        setProducts(prodRes.success ? prodRes.data : SAMPLE_PRODUCTS);
-        setUsers(userRes.success ? userRes.data : SAMPLE_USERS);
-        setTransactions(transRes.success ? transRes.data : []);
-        setActivityLogs(logRes.success ? logRes.data : []);
-        setNotifications(notifRes.success ? notifRes.data : []);
-      } else {
-        const [localProds, localUsers, localTrans, localLogs, localNotifs] = await Promise.all([
-          AsyncStorage.getItem(APP_CONFIG.storage.products),
-          AsyncStorage.getItem(APP_CONFIG.storage.users),
-          AsyncStorage.getItem(APP_CONFIG.storage.transactions),
-          AsyncStorage.getItem(APP_CONFIG.storage.activityLogs),
-          AsyncStorage.getItem(APP_CONFIG.storage.notifications),
-        ]);
+          if (pRes.success) setProducts(pRes.data || []);
+          if (uRes.success) setUsers(uRes.data || []);
+          if (tRes.success) setTransactions(tRes.data || []);
+          if (lRes.success) setLogs(lRes.data || []);
+          if (nRes.success) setNotifications(nRes.data || []);
+        } else {
+          console.log("Loading from AsyncStorage...");
+          const p = (await AsyncStorage.getItem(APP_CONFIG.storage.products)) || JSON.stringify(SAMPLE_PRODUCTS);
+          const u = (await AsyncStorage.getItem(APP_CONFIG.storage.users)) || JSON.stringify(SAMPLE_USERS);
+          const t = (await AsyncStorage.getItem(APP_CONFIG.storage.transactions)) || JSON.stringify(SAMPLE_TRANSACTIONS);
+          const l = (await AsyncStorage.getItem(APP_CONFIG.storage.activityLogs)) || JSON.stringify(SAMPLE_LOGS);
+          const n = (await AsyncStorage.getItem(APP_CONFIG.storage.notifications)) || JSON.stringify(SAMPLE_NOTIFICATIONS);
 
-        setProducts(localProds ? JSON.parse(localProds) : SAMPLE_PRODUCTS);
-        setUsers(localUsers ? JSON.parse(localUsers) : SAMPLE_USERS);
-        setTransactions(localTrans ? JSON.parse(localTrans) : []);
-        setActivityLogs(localLogs ? JSON.parse(localLogs) : []);
-        setNotifications(localNotifs ? JSON.parse(localNotifs) : []);
-
-        if (!localProds) await AsyncStorage.setItem(APP_CONFIG.storage.products, JSON.stringify(SAMPLE_PRODUCTS));
-        if (!localUsers) await AsyncStorage.setItem(APP_CONFIG.storage.users, JSON.stringify(SAMPLE_USERS));
+          setProducts(JSON.parse(p));
+          setUsers(JSON.parse(u));
+          setTransactions(JSON.parse(t));
+          setLogs(JSON.parse(l));
+          setNotifications(JSON.parse(n));
+        }
+      } catch (err) {
+        console.error("Error loading data:", err);
       }
-    } catch (err) {
-      console.error("Error loading data:", err);
-      setProducts(SAMPLE_PRODUCTS);
-      setUsers(SAMPLE_USERS);
-    } finally {
-      setLoading(false);
+    };
+    loadData();
+  }, []);
+
+  // --- CRUD HELPERS ---
+  const addProduct = async (product: Product) => {
+    if (APP_CONFIG.features.useBackend) {
+      await supabaseService.createProduct(product);
     }
+    const updated = [...products, product];
+    setProducts(updated);
+    await AsyncStorage.setItem(APP_CONFIG.storage.products, JSON.stringify(updated));
   };
 
-  // ---------- CRUD HANDLERS ----------
-  const addProduct = async (p: Omit<Product, "id">) => {
-    if (useBackend) await supabaseService.createProduct(p);
-    else {
-      const newProduct = { ...p, id: Date.now().toString() };
-      const updated = [...products, newProduct];
-      setProducts(updated);
-      await AsyncStorage.setItem(APP_CONFIG.storage.products, JSON.stringify(updated));
+  const updateProduct = async (id: string, product: Partial<Product>) => {
+    if (APP_CONFIG.features.useBackend) {
+      await supabaseService.updateProduct(id, product);
     }
-    await refreshData();
-  };
-
-  const updateProduct = async (id: string, p: Partial<Product>) => {
-    if (useBackend) await supabaseService.updateProduct(id, p);
-    else {
-      const updated = products.map(prod => (prod.id === id ? { ...prod, ...p } : prod));
-      setProducts(updated);
-      await AsyncStorage.setItem(APP_CONFIG.storage.products, JSON.stringify(updated));
-    }
-    await refreshData();
+    const updated = products.map((p) => (p.id === id ? { ...p, ...product } : p));
+    setProducts(updated);
+    await AsyncStorage.setItem(APP_CONFIG.storage.products, JSON.stringify(updated));
   };
 
   const deleteProduct = async (id: string) => {
-    if (useBackend) await supabaseService.deleteProduct(id);
-    else {
-      const updated = products.filter(p => p.id !== id);
-      setProducts(updated);
-      await AsyncStorage.setItem(APP_CONFIG.storage.products, JSON.stringify(updated));
+    if (APP_CONFIG.features.useBackend) {
+      await supabaseService.deleteProduct(id);
     }
-    await refreshData();
+    const updated = products.filter((p) => p.id !== id);
+    setProducts(updated);
+    await AsyncStorage.setItem(APP_CONFIG.storage.products, JSON.stringify(updated));
   };
 
-  const addUser = async (u: Omit<User, "id">) => {
-    if (useBackend) await supabaseService.createUser(u);
-    else {
-      const newUser = { ...u, id: Date.now().toString() };
-      const updated = [...users, newUser];
-      setUsers(updated);
-      await AsyncStorage.setItem(APP_CONFIG.storage.users, JSON.stringify(updated));
+  const addUser = async (user: User) => {
+    if (APP_CONFIG.features.useBackend) {
+      await supabaseService.createUser(user);
     }
-    await refreshData();
+    const updated = [...users, user];
+    setUsers(updated);
+    await AsyncStorage.setItem(APP_CONFIG.storage.users, JSON.stringify(updated));
   };
 
   const deleteUser = async (id: string) => {
-    if (useBackend) await supabaseService.deleteUser(id);
-    else {
-      const updated = users.filter(u => u.id !== id);
-      setUsers(updated);
-      await AsyncStorage.setItem(APP_CONFIG.storage.users, JSON.stringify(updated));
+    if (APP_CONFIG.features.useBackend) {
+      await supabaseService.deleteUser(id);
     }
-    await refreshData();
+    const updated = users.filter((u) => u.id !== id);
+    setUsers(updated);
+    await AsyncStorage.setItem(APP_CONFIG.storage.users, JSON.stringify(updated));
   };
 
-  const addTransaction = async (t: Omit<Transaction, "id">) => {
-    if (useBackend) await supabaseService.createTransaction(t);
-    else {
-      const newT = { ...t, id: Date.now().toString() };
-      const updated = [...transactions, newT];
-      setTransactions(updated);
-      await AsyncStorage.setItem(APP_CONFIG.storage.transactions, JSON.stringify(updated));
+  const addTransaction = async (transaction: Transaction) => {
+    if (APP_CONFIG.features.useBackend) {
+      await supabaseService.createTransaction(transaction);
     }
-    await refreshData();
+    const updated = [...transactions, transaction];
+    setTransactions(updated);
+    await AsyncStorage.setItem(APP_CONFIG.storage.transactions, JSON.stringify(updated));
   };
 
-  const addActivityLog = async (msg: string) => {
-    if (useBackend) await supabaseService.createActivityLog(msg);
-    else {
-      const log: ActivityLog = { id: Date.now().toString(), message: msg, created_at: new Date().toISOString() };
-      const updated = [...activityLogs, log];
-      setActivityLogs(updated);
-      await AsyncStorage.setItem(APP_CONFIG.storage.activityLogs, JSON.stringify(updated));
+  const addLog = async (log: ActivityLog) => {
+    if (APP_CONFIG.features.useBackend) {
+      await supabaseService.createActivityLog(log);
     }
-    await refreshData();
+    const updated = [...logs, log];
+    setLogs(updated);
+    await AsyncStorage.setItem(APP_CONFIG.storage.activityLogs, JSON.stringify(updated));
   };
 
-  const addNotification = async (msg: string) => {
-    if (useBackend) await supabaseService.createNotification(msg);
-    else {
-      const notif: Notification = { id: Date.now().toString(), message: msg, created_at: new Date().toISOString() };
-      const updated = [...notifications, notif];
-      setNotifications(updated);
-      await AsyncStorage.setItem(APP_CONFIG.storage.notifications, JSON.stringify(updated));
+  const addNotification = async (notification: Notification) => {
+    if (APP_CONFIG.features.useBackend) {
+      await supabaseService.createNotification(notification);
     }
-    await refreshData();
+    const updated = [notification, ...notifications];
+    setNotifications(updated);
+    await AsyncStorage.setItem(APP_CONFIG.storage.notifications, JSON.stringify(updated));
   };
 
-  // Init
-  useEffect(() => {
-    refreshData();
-  }, []);
+  const markNotificationRead = async (id: string) => {
+    if (APP_CONFIG.features.useBackend) {
+      await supabaseService.markNotificationAsRead(id);
+    }
+    const updated = notifications.map((n) => (n.id === id ? { ...n, read: true } : n));
+    setNotifications(updated);
+    await AsyncStorage.setItem(APP_CONFIG.storage.notifications, JSON.stringify(updated));
+  };
+
+  const markAllNotificationsRead = async () => {
+    if (APP_CONFIG.features.useBackend) {
+      await supabaseService.markAllNotificationsAsRead();
+    }
+    const updated = notifications.map((n) => ({ ...n, read: true }));
+    setNotifications(updated);
+    await AsyncStorage.setItem(APP_CONFIG.storage.notifications, JSON.stringify(updated));
+  };
+
+  const getTodaysSales = () => {
+    const today = new Date().toISOString().split("T")[0];
+    return transactions
+      .filter((t) => (t.created_at || "").startsWith(today))
+      .reduce((sum, t) => sum + t.total, 0);
+  };
 
   return (
     <DataContext.Provider
@@ -240,21 +286,30 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         products,
         users,
         transactions,
-        activityLogs,
+        logs,
         notifications,
-        loading,
+        unreadCount: notifications.filter((n) => !n.read).length,
         addProduct,
         updateProduct,
         deleteProduct,
         addUser,
         deleteUser,
         addTransaction,
-        addActivityLog,
+        addLog,
         addNotification,
-        refreshData,
+        markNotificationRead,
+        markAllNotificationsRead,
+        getTodaysSales,
       }}
     >
       {children}
     </DataContext.Provider>
   );
+};
+
+// --- HOOK ---
+export const useData = () => {
+  const ctx = useContext(DataContext);
+  if (!ctx) throw new Error("useData must be used within DataProvider");
+  return ctx;
 };
